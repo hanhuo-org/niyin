@@ -1,0 +1,32 @@
+[project]
+name = "hanhuo-niyin"
+version = "1.0.0"
+description = "汉火拟音 (Hanfire Niyin) — 上古/中古/近古三代历史汉语拟音 TTS（ZipVoice + QAT INT8 + WebGPU/WASM）与唐调《诗经》/古文/辞赋男女双声部唱吟引擎"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.2",
+    "torchaudio>=2.2",
+    "numpy>=1.24",
+    "scipy>=1.11",
+    "soundfile>=0.12",
+    "librosa>=0.10",
+    "einops>=0.7",
+    "pyyaml>=6.0",
+    "pypinyin>=0.51",
+    "opencc-python-reimplemented>=0.1.7",
+    "vocos>=0.1.0",
+    "praat-parselmouth>=0.4.3",
+    "onnx>=1.16",
+    "onnxruntime>=1.18",
+    "huggingface_hub>=0.24",
+    "lightning>=2.2",
+    "tqdm>=4.66",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["hanfire_tts*", "hanfire_sing*"]

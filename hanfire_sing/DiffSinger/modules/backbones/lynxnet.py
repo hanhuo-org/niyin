@@ -1,0 +1,160 @@
+# refer to： 
+# https://github.com/CNChTu/Diffusion-SVC/blob/v2.0_dev/diffusion/naive_v2/model_conformer_naive.py
+# https://github.com/CNChTu/Diffusion-SVC/blob/v2.0_dev/diffusion/naive_v2/naive_v2_diff.py
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+from modules.commons.common_layers import SinusoidalPosEmb, SwiGLU, Transpose, AdamWConv1d
+from modules.commons.common_layers import KaimingNormalConv1d as Conv1d
+from modules.commons.common_layers import MixedPrecisionLayerNorm as LayerNorm
+from utils.hparams import hparams
+
+
+class LYNXConvModule(nn.Module):
+    @staticmethod
+    def calc_same_padding(kernel_size):
+        pad = kernel_size // 2
+        return pad, pad - (kernel_size + 1) % 2
+
+    def __init__(self, dim, expansion_factor, kernel_size=31, activation='PReLU', dropout=0.0):
+        super().__init__()
+        inner_dim = dim * expansion_factor
+        activation_classes = {
+            'SiLU': nn.SiLU,
+            'ReLU': nn.ReLU,
+            'PReLU': lambda: nn.PReLU(inner_dim)
+        }
+        activation = activation if activation is not None else 'PReLU'
+        if activation not in activation_classes:
+            raise ValueError(f'{activation} is not a valid activation')
+        _activation = activation_classes[activation]()
+        padding = self.calc_same_padding(kernel_size)
+        if float(dropout) > 0.:
+            _dropout = nn.Dropout(dropout)
+        else:
+            _dropout = nn.Identity()
+        self.net = nn.Sequential(
+            LayerNorm(dim),
+            Transpose((1, 2)),
+            nn.Conv1d(dim, inner_dim * 2, 1),
+            SwiGLU(dim=1),
+            nn.Conv1d(inner_dim, inner_dim, kernel_size=kernel_size, padding=padding[0], groups=inner_dim),
+            _activation,
+            nn.Conv1d(inner_dim, dim, 1),
+            Transpose((1, 2)),
+            _dropout
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
+
+class LYNXNetResidualLayer(nn.Module):
+    def __init__(self, dim_cond, dim, expansion_factor, kernel_size=31, activation='PReLU', dropout=0.0):
+        super().__init__()
+        self.diffusion_projection = nn.Conv1d(dim, dim, 1)
+        self.conditioner_projection = nn.Conv1d(dim_cond, dim, 1)
+        self.convmodule = LYNXConvModule(dim=dim, expansion_factor=expansion_factor, kernel_size=kernel_size,
+                                         activation=activation, dropout=dropout)
+
+    def forward(self, x, conditioner, diffusion_step, front_cond_inject=False):
+        if front_cond_inject:
+            x = x + self.conditioner_projection(conditioner)
+            res_x = x
+        else:
+            res_x = x
+            x = x + self.conditioner_projection(conditioner)
+        x = x + self.diffusion_projection(diffusion_step)
+        x = x.transpose(1, 2)
+        x = self.convmodule(x)  # (batch, length, dim)
+        x = x.transpose(1, 2) + res_x
+        return x  # (batch, dim, length)
+
+
+class LYNXNet(nn.Module):
+    def __init__(self, in_dims, n_feats, *, num_layers=6, num_channels=512, expansion_factor=2, kernel_size=31,
+                 activation='PReLU', dropout_rate=0.0, strong_cond=False):
+        """
+        LYNXNet(Linear Gated Depthwise Separable Convolution Network)
+        TIPS:You can control the style of the generated results by modifying the 'activation', 
+            - 'PReLU'(default) : Similar to WaveNet
+            - 'SiLU' : Voice will be more pronounced, not recommended for use under DDPM
+            - 'ReLU' : Contrary to 'SiLU', Voice will be weakened
+        """
+        super().__init__()
+        self.in_dims = in_dims
+        self.n_feats = n_feats
+        self.input_projection = Conv1d(in_dims * n_feats, num_channels, 1)
+        self.diffusion_embedding = nn.Sequential(
+            SinusoidalPosEmb(num_channels),
+            nn.Linear(num_channels, num_channels * 4),
+            nn.GELU(),
+            nn.Linear(num_channels * 4, num_channels),
+        )
+        self.residual_layers = nn.ModuleList(
+            [
+                LYNXNetResidualLayer(
+                    dim_cond=hparams['hidden_size'],
+                    dim=num_channels,
+                    expansion_factor=expansion_factor,
+                    kernel_size=kernel_size,
+                    activation=activation,
+                    dropout=dropout_rate
+                )
+                for _ in range(num_layers)
+            ]
+        )
+        self.norm = nn.LayerNorm(num_channels)
+        self.output_projection = AdamWConv1d(num_channels, in_dims * n_feats, kernel_size=1)
+        self.strong_cond = strong_cond
+        nn.init.zeros_(self.output_projection.weight)
+
+    def forward(self, spec, diffusion_step, cond, diffusion_step_2=None, mask=None):
+        """
+        :param spec: [B, F, M, T]
+        :param diffusion_step: [B] or [B, 1] when mask is None; [B, 1] otherwise.
+        :param cond: [B, H, T]
+        :param diffusion_step_2: [B, 1], required when mask is provided; ignored otherwise.
+        :param mask: Optional [B, T] weights blending the two timestep embeddings.
+        :return: [B, F, M, T]
+        """
+
+        if self.n_feats == 1:
+            x = spec[:, 0]  # [B, M, T]
+        else:
+            x = spec.flatten(start_dim=1, end_dim=2)  # [B, F*M, T]
+
+        x = self.input_projection(x)  # x [B, residual_channel, T]
+        if not self.strong_cond:
+            x = F.gelu(x)
+
+        if mask is not None:
+            step = torch.cat((diffusion_step, diffusion_step_2), dim=0)
+            step = self.diffusion_embedding(step)
+            step, step_2 = torch.split(step, x.shape[0], dim=0) #[B, 1, C]
+            mask = mask.to(x).unsqueeze(-1) # [B, T, 1]
+            step = step + (step_2 - step) * mask
+        else:
+            step = self.diffusion_embedding(diffusion_step)
+            if step.dim() == 2:
+                step = step.unsqueeze(1)
+
+        for layer in self.residual_layers:
+            x = layer(x, cond, step.transpose(1, 2), front_cond_inject=self.strong_cond)
+
+        # post-norm
+        x = self.norm(x.transpose(1, 2)).transpose(1, 2)
+
+        # output_projection
+        x = self.output_projection(x)  # [B, F*M, T]
+
+        if self.n_feats == 1:
+            x = x[:, None, :, :]
+        else:
+            # This is the temporary solution since PyTorch 1.13
+            # does not support exporting aten::unflatten to ONNX
+            # x = x.unflatten(dim=1, sizes=(self.n_feats, self.in_dims))
+            x = x.reshape(-1, self.n_feats, self.in_dims, x.shape[2])
+        return x

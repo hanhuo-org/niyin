@@ -1,0 +1,4418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" id="metaThemeColor" content="#f7f4ed" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="汉火古音" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>汉火三代古音 · 拟音与听审工作台</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./favicon.svg?v=20261119d" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=20261119d" />
+  <link rel="modulepreload" href="./hanfire_dsp.mjs?v=20261119d" />
+  <link rel="modulepreload" href="./model_cache.mjs?v=20261119d" />
+  <style>
+    /* ================================================================
+     * 墨观 Inkstone · 中国传统色主题体系 (参考 Konata9/inkstone)
+     * 宣纸 (Xuanzhi · 默认温润古籍) / 玄墨 (Xuanmo) / 青瓷 (Qingci) / 沧海 (Canghai)
+     * ================================================================ */
+    :root,
+    :root[data-theme="xuanzhi"] {
+      color-scheme: light;
+      --bg: #f7f4ed;
+      --bg-glow: #efe8d8;
+      --panel: #fdfbf7;
+      --panel-alt: #f1ece0;
+      --input-bg: #ffffff;
+      --border: #ddd3be;
+      --border-soft: rgba(114, 104, 92, 0.14);
+      --gold: #c34435;         /* 鹤顶红 · 朱砂点题 */
+      --gold-dim: #a85042;
+      --gold-soft: rgba(195, 68, 53, 0.11);
+      --gold-border: rgba(195, 68, 53, 0.42);
+      --ochre: #a87624;        /* 赭黄 · 星标/音标/次高亮 */
+      --action: #356888;       /* 花青蓝 · 交互/按钮 */
+      --vermilion: #c34435;    /* 鹤顶红 */
+      --jade: #1a6840;         /* 荷叶绿 · 成功/调音/显卡 */
+      --jade-soft: rgba(26, 104, 64, 0.11);
+      --jade-border: rgba(26, 104, 64, 0.38);
+      --jade-fg: #145332;
+      --plum: #813c85;         /* 桔梗紫 */
+      --text: #2b2623;         /* 松烟墨 */
+      --text-strong: #1d1917;
+      --muted: #6e6459;        /* 淡墨 */
+      --btn-grad: linear-gradient(135deg, #c94e3f, #a73427);
+      --btn-fg: #fdfbf7;
+      --bar-bg: #e5dcc9;
+      --star-off: #cfc4b0;
+      --star-on: #d68a1a;
+      --shadow: rgba(58, 44, 28, 0.09);
+      --backdrop: rgba(34, 28, 22, 0.56);
+      --sticky-bg: rgba(253, 251, 247, 0.96);
+      --hero-bg: linear-gradient(135deg, rgba(195, 68, 53, 0.09), rgba(241, 236, 224, 0.96));
+      --canvas-bg: #f4efe3;
+      --canvas-grid: rgba(114, 104, 92, 0.14);
+      --canvas-mid: rgba(195, 68, 53, 0.24);
+      --canvas-wave-a: #c34435;
+      --canvas-wave-b: #1a6840;
+      --canvas-text: #6e6459;
+      --tooltip-bg: rgba(43, 38, 35, 0.96);
+      --tooltip-fg: #f7f4ed;
+      --tooltip-title: #f2be72;
+      --tooltip-foot: #7fd4ae;
+      --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+      --serif: "Noto Serif CJK SC", "Songti SC", "SimSun", serif;
+      --sans: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    :root[data-theme="xuanmo"] {
+      color-scheme: dark;
+      --bg: #14131a;
+      --bg-glow: #1f1d29;
+      --panel: #1b1a23;
+      --panel-alt: #24222f;
+      --input-bg: #121118;
+      --border: #343245;
+      --border-soft: rgba(255, 255, 255, 0.07);
+      --gold: #d8574a;         /* 鱼鳃红 */
+      --gold-dim: #a9473e;
+      --gold-soft: rgba(216, 87, 74, 0.16);
+      --gold-border: rgba(216, 87, 74, 0.48);
+      --ochre: #d6a01d;        /* 土黄 */
+      --action: #619ac3;       /* 羽扇豆蓝 */
+      --vermilion: #e45f6f;    /* 山茶红 */
+      --jade: #2bae85;         /* 铜绿 */
+      --jade-soft: rgba(43, 174, 133, 0.14);
+      --jade-border: rgba(43, 174, 133, 0.46);
+      --jade-fg: #7de3c1;
+      --plum: #c08eaf;         /* 萝兰紫 */
+      --text: #dedde6;
+      --text-strong: #f2f1f7;
+      --muted: #9896a8;
+      --btn-grad: linear-gradient(135deg, #de6457, #b94439);
+      --btn-fg: #fff9f7;
+      --bar-bg: #292736;
+      --star-off: #48465c;
+      --star-on: #e6b332;
+      --shadow: rgba(0, 0, 0, 0.38);
+      --backdrop: rgba(8, 7, 12, 0.76);
+      --sticky-bg: rgba(27, 26, 35, 0.96);
+      --hero-bg: linear-gradient(135deg, rgba(216, 87, 74, 0.14), rgba(27, 26, 35, 0.95));
+      --canvas-bg: #100f16;
+      --canvas-grid: rgba(255, 255, 255, 0.07);
+      --canvas-mid: rgba(216, 87, 74, 0.25);
+      --canvas-wave-a: #d8574a;
+      --canvas-wave-b: #2bae85;
+      --canvas-text: #9896a8;
+      --tooltip-bg: rgba(24, 22, 32, 0.97);
+      --tooltip-fg: #e6e5ef;
+      --tooltip-title: #f0b95b;
+      --tooltip-foot: #7de3c1;
+    }
+    :root[data-theme="qingci"] {
+      color-scheme: light;
+      --bg: #e8f0ec;
+      --bg-glow: #dbe8e2;
+      --panel: #f5faf7;
+      --panel-alt: #e4eee9;
+      --input-bg: #ffffff;
+      --border: #c5d6ce;
+      --border-soft: rgba(34, 48, 44, 0.11);
+      --gold: #bc3a46;         /* 尖晶玉红 */
+      --gold-dim: #9c4049;
+      --gold-soft: rgba(188, 58, 70, 0.10);
+      --gold-border: rgba(188, 58, 70, 0.42);
+      --ochre: #9f6f1f;
+      --action: #2f6d7e;       /* 靛青 */
+      --vermilion: #bc3a46;
+      --jade: #1a6840;         /* 荷叶绿 */
+      --jade-soft: rgba(26, 104, 64, 0.11);
+      --jade-border: rgba(26, 104, 64, 0.40);
+      --jade-fg: #145332;
+      --plum: #813c85;
+      --text: #22302c;
+      --text-strong: #15211e;
+      --muted: #5a7069;
+      --btn-grad: linear-gradient(135deg, #257a50, #1a603d);
+      --btn-fg: #f5faf7;
+      --bar-bg: #d3e2da;
+      --star-off: #b7cbc1;
+      --star-on: #cc8318;
+      --shadow: rgba(26, 52, 44, 0.08);
+      --backdrop: rgba(20, 32, 28, 0.56);
+      --sticky-bg: rgba(245, 250, 247, 0.96);
+      --hero-bg: linear-gradient(135deg, rgba(26, 104, 64, 0.10), rgba(228, 238, 233, 0.96));
+      --canvas-bg: #eaf3ee;
+      --canvas-grid: rgba(34, 48, 44, 0.11);
+      --canvas-mid: rgba(26, 104, 64, 0.24);
+      --canvas-wave-a: #bc3a46;
+      --canvas-wave-b: #1a6840;
+      --canvas-text: #5a7069;
+      --tooltip-bg: rgba(31, 45, 41, 0.96);
+      --tooltip-fg: #edf5f1;
+      --tooltip-title: #f0c276;
+      --tooltip-foot: #84dfb8;
+    }
+    :root[data-theme="canghai"] {
+      color-scheme: dark;
+      --bg: #0d1822;
+      --bg-glow: #15283a;
+      --panel: #132230;
+      --panel-alt: #1a2e40;
+      --input-bg: #0b151e;
+      --border: #2a435a;
+      --border-soft: rgba(255, 255, 255, 0.07);
+      --gold: #dc5e41;         /* 银朱 */
+      --gold-dim: #b34d36;
+      --gold-soft: rgba(220, 94, 65, 0.15);
+      --gold-border: rgba(220, 94, 65, 0.48);
+      --ochre: #d6a01d;        /* 土黄 */
+      --action: #619ac3;       /* 羽扇豆蓝 */
+      --vermilion: #dc5e41;
+      --jade: #1ba784;         /* 竹绿 */
+      --jade-soft: rgba(27, 167, 132, 0.14);
+      --jade-border: rgba(27, 167, 132, 0.46);
+      --jade-fg: #76e3c6;
+      --plum: #c08eaf;
+      --text: #d8e4ee;
+      --text-strong: #edf4fa;
+      --muted: #8aa2b8;
+      --btn-grad: linear-gradient(135deg, #e06a4f, #bd4b31);
+      --btn-fg: #fffaf7;
+      --bar-bg: #20364a;
+      --star-off: #355068;
+      --star-on: #e8b535;
+      --shadow: rgba(0, 0, 0, 0.42);
+      --backdrop: rgba(6, 12, 18, 0.78);
+      --sticky-bg: rgba(19, 34, 48, 0.96);
+      --hero-bg: linear-gradient(135deg, rgba(97, 154, 195, 0.16), rgba(19, 34, 48, 0.95));
+      --canvas-bg: #0a131c;
+      --canvas-grid: rgba(255, 255, 255, 0.07);
+      --canvas-mid: rgba(97, 154, 195, 0.25);
+      --canvas-wave-a: #dc5e41;
+      --canvas-wave-b: #1ba784;
+      --canvas-text: #8aa2b8;
+      --tooltip-bg: rgba(16, 29, 41, 0.97);
+      --tooltip-fg: #e2edf6;
+      --tooltip-title: #f0be64;
+      --tooltip-foot: #76e3c6;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { overflow-x: clip; }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top, var(--bg-glow) 0%, var(--bg) 68%);
+      color: var(--text);
+      font-family: var(--sans);
+      line-height: 1.55;
+      min-height: 100vh;
+      transition: background 0.25s ease, color 0.2s ease;
+    }
+    .wrap {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 22px 18px 64px;
+    }
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 14px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+    .brand h1 {
+      margin: 0;
+      font-family: var(--serif);
+      font-size: 1.68rem;
+      letter-spacing: 0.06em;
+      color: var(--gold);
+    }
+    .brand p {
+      margin: 5px 0 0;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .header-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+    .badge {
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--muted);
+      font-family: var(--mono);
+      transition: all 0.15s ease;
+    }
+    .badge.gpu {
+      border-color: var(--jade-border);
+      background: var(--jade-soft);
+      color: var(--jade-fg);
+    }
+    .badge.wasm {
+      border-color: var(--gold-border);
+      background: var(--gold-soft);
+      color: var(--gold);
+    }
+    .badge[style*="pointer"]:hover { filter: brightness(1.06); transform: translateY(-0.5px); }
+
+    /* 墨观传统色四卷切换器 */
+    .theme-switcher {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 6px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+    }
+    .theme-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-family: var(--serif);
+      cursor: pointer;
+      transition: all 0.14s ease;
+    }
+    .theme-btn:hover { color: var(--text); }
+    .theme-btn.active {
+      border-color: var(--gold-border);
+      background: var(--gold-soft);
+      color: var(--gold);
+      font-weight: 700;
+    }
+    .theme-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      border: 1px solid rgba(128, 128, 128, 0.35);
+      display: inline-block;
+    }
+
+    /* 顶层视图切换导航 */
+    .main-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .nav-tab {
+      padding: 8px 16px;
+      border-radius: 9px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .nav-tab:hover { border-color: var(--gold-dim); color: var(--text); }
+    .nav-tab.active {
+      border-color: var(--gold);
+      color: var(--btn-fg);
+      background: var(--btn-grad);
+      box-shadow: 0 3px 10px var(--shadow);
+    }
+    .nav-wall-btn {
+      padding: 8px 15px;
+      border-radius: 9px;
+      border: 1px solid var(--jade-border);
+      background: var(--jade-soft);
+      color: var(--jade-fg);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+    }
+    .nav-wall-btn:hover {
+      border-color: var(--jade);
+      filter: brightness(1.05);
+      transform: translateY(-0.5px);
+    }
+    .nav-spacer { flex: 1; }
+    .view-panel { display: none; }
+    .view-panel.active { display: block; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.22fr) minmax(0, 0.98fr);
+      gap: 18px;
+    }
+    .grid > *, .about-grid > *, .rhyme-grid > * { min-width: 0; max-width: 100%; }
+    @media (max-width: 920px) {
+      .grid { grid-template-columns: minmax(0, 1fr); }
+      .header-right { align-items: flex-start; }
+      .badges { justify-content: flex-start; }
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+      box-shadow: 0 8px 24px var(--shadow);
+      min-width: 0;
+      max-width: 100%;
+    }
+    .card h2 {
+      margin: 0 0 13px;
+      font-size: 1rem;
+      font-family: var(--serif);
+      color: var(--gold);
+      font-weight: 700;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .era-tabs {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .era-btn {
+      text-align: left;
+      padding: 9px 11px;
+      border-radius: 9px;
+      border: 1px solid var(--border);
+      background: var(--panel-alt);
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .era-btn:hover { border-color: var(--gold-dim); }
+    .era-btn.active {
+      border-color: var(--gold);
+      background: var(--gold-soft);
+      box-shadow: inset 0 0 0 1px var(--gold-border);
+    }
+    .era-btn strong { display: block; font-size: 0.9rem; color: var(--gold); font-family: var(--serif); }
+    .era-btn > span { font-size: 0.74rem; color: var(--muted); }
+    .era-btn .term { display: inline; font-size: inherit; color: inherit; }
+    .presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .preset-chip {
+      font-size: 0.76rem;
+      padding: 4px 9px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--panel-alt);
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.12s ease;
+    }
+    .preset-chip:hover { border-color: var(--gold); color: var(--gold); }
+    textarea, input[type="text"], input[type="email"], select {
+      width: 100%;
+      padding: 9px 11px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--input-bg);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.9rem;
+      transition: border-color 0.15s ease;
+    }
+    textarea#textInput {
+      min-height: 112px;
+      resize: vertical;
+      font-family: var(--serif);
+      font-size: 1.08rem;
+      line-height: 1.7;
+    }
+    textarea:focus, input:focus, select:focus {
+      outline: none;
+      border-color: var(--gold);
+    }
+    .controls-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .field label {
+      display: block;
+      font-size: 0.76rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    input[type="range"] { width: 100%; accent-color: var(--gold); }
+    .custom-upload {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px dashed var(--border);
+      background: var(--panel-alt);
+      display: none;
+    }
+    .custom-upload.visible { display: block; }
+    .actions {
+      margin-top: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      align-items: center;
+    }
+    .btn-primary {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 9px;
+      background: var(--btn-grad);
+      color: var(--btn-fg);
+      font-weight: 700;
+      font-size: 0.92rem;
+      cursor: pointer;
+      box-shadow: 0 3px 10px var(--shadow);
+      transition: filter 0.14s ease, transform 0.12s ease;
+    }
+    .btn-primary:hover:not(:disabled) { filter: brightness(1.07); transform: translateY(-0.5px); }
+    .btn-primary:disabled { opacity: 0.52; cursor: not-allowed; box-shadow: none; }
+    .btn-secondary {
+      padding: 8px 13px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--panel-alt);
+      color: var(--text);
+      font-size: 0.84rem;
+      text-decoration: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.14s ease;
+    }
+    .btn-secondary:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
+    .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-accent {
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--jade-border);
+      background: var(--jade-soft);
+      color: var(--jade-fg);
+      font-size: 0.84rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+      transition: all 0.14s ease;
+    }
+    .btn-accent:hover:not(:disabled) { border-color: var(--jade); filter: brightness(1.06); }
+    .btn-sm { padding: 4px 10px; font-size: 0.76rem; border-radius: 6px; }
+
+    /* 显卡可用推荐切换提示条 */
+    .gpu-prompt-bar {
+      display: none;
+      margin-bottom: 11px;
+      padding: 9px 12px;
+      border-radius: 9px;
+      border: 1px solid var(--jade-border);
+      background: var(--jade-soft);
+      color: var(--jade-fg);
+      font-size: 0.8rem;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .gpu-prompt-bar.show { display: flex; }
+    .gpu-prompt-actions { display: flex; gap: 6px; align-items: center; }
+
+    .progress-box { margin-bottom: 12px; }
+    .status-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 0.81rem;
+      color: var(--muted);
+      margin-bottom: 5px;
+      gap: 10px;
+    }
+    #pctText {
+      flex-shrink: 0;
+      white-space: nowrap;
+      font-family: var(--mono);
+    }
+    .bar-bg {
+      height: 7px;
+      border-radius: 999px;
+      background: var(--bar-bg);
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--jade), var(--gold));
+      transition: width 0.16s ease;
+    }
+    .fallback-note {
+      display: none;
+      margin-bottom: 10px;
+      padding: 8px 11px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      border: 1px solid var(--gold-border);
+      background: var(--gold-soft);
+      color: var(--gold);
+    }
+    .fallback-note.show { display: block; }
+    canvas#waveCanvas {
+      width: 100%;
+      height: 92px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--canvas-bg);
+      display: block;
+      margin-bottom: 10px;
+    }
+    .audio-action-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .audio-action-row audio {
+      flex: 1;
+      min-width: 210px;
+      height: 38px;
+      margin: 0;
+    }
+    audio { width: 100%; height: 38px; margin-bottom: 10px; }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 7px;
+    }
+    @media (max-width: 480px) {
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+    }
+    .metric {
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 9px;
+      text-align: center;
+    }
+    .metric .k { font-size: 0.7rem; color: var(--muted); }
+    .metric .v { font-size: 0.9rem; font-family: var(--mono); color: var(--gold); margin-top: 2px; font-weight: 600; }
+
+    /* 逐字可点击调音卡片 */
+    .gloss-card { margin-top: 18px; }
+    .adj-banner {
+      display: none;
+      margin-bottom: 10px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--jade-border);
+      background: var(--jade-soft);
+      font-size: 0.8rem;
+      color: var(--jade-fg);
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .adj-banner.show { display: flex; }
+    .gloss-ribbon {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .char-box {
+      min-width: 72px;
+      padding: 7px 9px 6px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--panel-alt);
+      text-align: center;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.14s ease;
+    }
+    .char-box:hover {
+      border-color: var(--gold);
+      transform: translateY(-1px);
+    }
+    .char-box.tuned {
+      border-color: var(--jade);
+      background: var(--jade-soft);
+    }
+    .char-box .edit-dot {
+      position: absolute;
+      top: 3px;
+      right: 5px;
+      font-size: 0.65rem;
+      color: var(--muted);
+      opacity: 0.65;
+    }
+    .char-box.tuned .edit-dot { color: var(--jade); opacity: 1; }
+    .char-box .hz { font-family: var(--serif); font-size: 1.24rem; color: var(--text-strong); }
+    .char-box .ipa { font-family: var(--mono); font-size: 0.72rem; color: var(--ochre); margin-top: 2px; font-weight: 600; }
+    .char-box .tok {
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      color: var(--muted);
+      margin-top: 2px;
+      max-width: 118px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* 听审打分与评论弹窗表单 */
+    .identity-pill {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.78rem;
+      padding: 3px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--gold-border);
+      background: var(--gold-soft);
+      color: var(--gold);
+    }
+    .identity-pill.show { display: inline-flex; }
+    .identity-pill button {
+      border: none;
+      background: transparent;
+      color: var(--jade);
+      cursor: pointer;
+      font-size: 0.76rem;
+      padding: 0;
+      text-decoration: underline;
+    }
+    .identity-fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    @media (max-width: 640px) {
+      .identity-fields { grid-template-columns: 1fr; }
+    }
+    .identity-fields.hidden { display: none; }
+    .star-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .stars {
+      display: inline-flex;
+      gap: 4px;
+    }
+    .star-btn {
+      font-size: 1.55rem;
+      line-height: 1;
+      border: none;
+      background: transparent;
+      color: var(--star-off);
+      cursor: pointer;
+      padding: 2px;
+      transition: transform 0.1s ease, color 0.1s ease;
+    }
+    .star-btn.lit { color: var(--star-on); }
+    .star-btn:hover { transform: scale(1.14); }
+    .quick-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 7px 0 10px;
+    }
+    .qtag {
+      font-size: 0.74rem;
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--panel-alt);
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .qtag:hover { border-color: var(--gold); color: var(--gold); }
+    .fb-context {
+      font-size: 0.78rem;
+      color: var(--muted);
+      padding: 8px 11px;
+      border-radius: 8px;
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+    .fb-msg {
+      margin-top: 8px;
+      font-size: 0.84rem;
+    }
+    .fb-msg.ok { color: var(--jade); font-weight: 600; }
+    .fb-msg.err { color: var(--vermilion); font-weight: 600; }
+    .hp-field { position: absolute; left: -9999px; opacity: 0; height: 0; width: 0; pointer-events: none; }
+
+    /* 精选公开评论墙（弹窗内） */
+    .wall-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+      gap: 12px;
+    }
+    .wall-item {
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .wall-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .wall-user { font-weight: 600; font-size: 0.88rem; color: var(--text-strong); }
+    .wall-stars { color: var(--star-on); font-size: 0.85rem; letter-spacing: 1px; }
+    .wall-text {
+      font-family: var(--serif);
+      font-size: 0.96rem;
+      color: var(--gold);
+      margin: 4px 0 6px;
+    }
+    .wall-ipa {
+      font-family: var(--mono);
+      font-size: 0.76rem;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: var(--jade-soft);
+      border: 1px solid var(--jade-border);
+      color: var(--jade-fg);
+      margin-bottom: 6px;
+      word-break: break-all;
+    }
+    .wall-comment { font-size: 0.83rem; color: var(--text); margin: 0 0 8px; white-space: pre-wrap; }
+    .wall-foot {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    /* 全韵系音库试听视图 */
+    .rhyme-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .rhyme-era-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+    .pill-btn {
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--panel-alt);
+      color: var(--muted);
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .pill-btn.active {
+      border-color: var(--gold);
+      background: var(--gold-soft);
+      color: var(--gold);
+      font-weight: 600;
+    }
+    .rhyme-search { max-width: 240px; }
+    .rhyme-group-title {
+      margin: 16px 0 8px;
+      font-family: var(--serif);
+      font-size: 0.98rem;
+      color: var(--gold);
+      border-left: 3px solid var(--gold);
+      padding-left: 8px;
+    }
+    .rhyme-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px;
+    }
+    .rhyme-card {
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 13px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .rhyme-card:hover { border-color: var(--gold-dim); }
+    .rhyme-card.playing { border-color: var(--jade); box-shadow: 0 0 0 1px var(--jade-border); }
+    .rhyme-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 6px;
+    }
+    .rhyme-name { font-weight: 700; font-size: 0.92rem; color: var(--text-strong); }
+    .rhyme-ipa { font-family: var(--mono); font-size: 0.75rem; color: var(--ochre); font-weight: 600; }
+    .rhyme-sample { font-family: var(--serif); font-size: 1.16rem; letter-spacing: 0.12em; color: var(--text-strong); }
+    .rhyme-note { font-size: 0.73rem; color: var(--muted); }
+    .rhyme-btns { display: flex; gap: 6px; margin-top: 4px; }
+    .rhyme-player-bar {
+      position: sticky;
+      top: 10px;
+      z-index: 20;
+      margin-bottom: 14px;
+      padding: 11px 15px;
+      border-radius: 10px;
+      border: 1px solid var(--gold-border);
+      background: var(--sticky-bg);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      box-shadow: 0 6px 20px var(--shadow);
+    }
+    .rhyme-player-bar.show { display: flex; }
+
+    /* 通用弹窗（调音 / 评论 / 评论墙 / 手机流量提示） */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: var(--backdrop);
+      backdrop-filter: blur(3px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 16px;
+    }
+    .modal-backdrop.show { display: flex; animation: hfFadeIn 0.16s ease; }
+    @keyframes hfFadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .modal {
+      width: 100%;
+      max-width: 580px;
+      max-height: 90vh;
+      overflow-y: auto;
+      background: var(--panel);
+      border: 1px solid var(--gold-border);
+      border-radius: 14px;
+      padding: 20px 22px;
+      box-shadow: 0 22px 58px rgba(0, 0, 0, 0.36);
+      animation: hfPopIn 0.16s ease;
+    }
+    .modal.modal-wide { max-width: 860px; }
+    .modal.modal-narrow { max-width: 460px; }
+    @keyframes hfPopIn { from { opacity: 0; transform: translateY(8px) scale(0.985); } to { opacity: 1; transform: none; } }
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+    }
+    .modal-head h3 {
+      margin: 0;
+      font-family: var(--serif);
+      color: var(--gold);
+      font-size: 1.12rem;
+    }
+    .tuner-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .tuner-pane { display: none; }
+    .tuner-pane.active { display: block; }
+    .poly-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .poly-opt {
+      text-align: left;
+      padding: 8px 11px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--panel-alt);
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .poly-opt:hover, .poly-opt.selected { border-color: var(--gold); background: var(--gold-soft); }
+    .tuner-preview {
+      margin-top: 12px;
+      padding: 9px 12px;
+      border-radius: 8px;
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--jade-fg);
+    }
+
+    /* 手机端流量确认弹窗强调卡片 */
+    .traffic-box {
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--gold-border);
+      background: var(--gold-soft);
+      margin-bottom: 14px;
+    }
+    .traffic-size {
+      font-family: var(--mono);
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--gold);
+      margin: 4px 0;
+    }
+    .traffic-note {
+      font-size: 0.82rem;
+      color: var(--text);
+      margin: 0;
+      line-height: 1.6;
+    }
+
+    /* 合成历史与双轨波形图对比 */
+    .cmp-controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    @media (max-width: 780px) {
+      .cmp-controls { grid-template-columns: 1fr; }
+    }
+    .cmp-slot {
+      padding: 11px 13px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--panel-alt);
+    }
+    .cmp-slot.slot-a { border-left: 3px solid var(--gold); }
+    .cmp-slot.slot-b { border-left: 3px solid var(--jade); }
+    .cmp-slot-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+    canvas#compareCanvas {
+      width: 100%;
+      height: 240px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--canvas-bg);
+      display: block;
+      margin: 10px 0;
+    }
+    .cmp-metrics-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      font-family: var(--mono);
+      margin-top: 8px;
+    }
+    .cmp-metrics-table th, .cmp-metrics-table td {
+      padding: 7px 9px;
+      border-bottom: 1px solid var(--border-soft);
+      text-align: left;
+    }
+    .cmp-metrics-table th { color: var(--muted); font-weight: 600; }
+    .hist-list {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+    .hist-item {
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 14px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    .hist-meta { flex: 1; min-width: 240px; }
+    .hist-title { font-family: var(--serif); font-size: 0.98rem; color: var(--gold); }
+    .hist-sub { font-size: 0.74rem; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
+    .hist-btns { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+    /* 设计理念介绍页 */
+    .about-hero {
+      padding: 20px 22px;
+      border-radius: 12px;
+      border: 1px solid var(--gold-border);
+      background: var(--hero-bg);
+      margin-bottom: 18px;
+    }
+    .about-hero h2 {
+      margin: 0 0 8px;
+      font-family: var(--serif);
+      font-size: 1.32rem;
+      color: var(--gold);
+    }
+    .about-hero p { margin: 0; font-size: 0.9rem; color: var(--text); }
+    .about-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 860px) {
+      .about-grid { grid-template-columns: 1fr; }
+    }
+    .about-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+    }
+    .about-card h3 {
+      margin: 0 0 10px;
+      font-family: var(--serif);
+      font-size: 1.05rem;
+      color: var(--gold);
+    }
+    .about-card p { margin: 0 0 10px; font-size: 0.86rem; color: var(--text); }
+    .about-card ul { margin: 0 0 12px; padding-left: 18px; font-size: 0.84rem; color: var(--muted); }
+    .about-card li { margin-bottom: 5px; }
+    .about-card li strong { color: var(--text-strong); }
+    .demo-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .about-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      margin-top: 8px;
+    }
+    .about-table th, .about-table td {
+      padding: 7px 9px;
+      border: 1px solid var(--border);
+      text-align: left;
+    }
+    .about-table th { background: var(--panel-alt); color: var(--gold); }
+    code {
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-family: var(--mono);
+      font-size: 0.85em;
+    }
+
+    /* 音韵拟音术语悬浮提示 */
+    .term {
+      border-bottom: 1px dotted var(--gold-border);
+      cursor: help;
+      padding-bottom: 1px;
+      transition: color 0.12s ease, border-color 0.12s ease;
+    }
+    .term:hover, .term:focus {
+      color: var(--gold);
+      border-bottom-color: var(--gold);
+    }
+    .hf-tooltip {
+      position: fixed;
+      z-index: 9999;
+      max-width: 340px;
+      padding: 10px 13px;
+      border-radius: 10px;
+      border: 1px solid var(--gold-border);
+      background: var(--tooltip-bg);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.38);
+      color: var(--tooltip-fg);
+      font-size: 0.8rem;
+      line-height: 1.55;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 0.13s ease, transform 0.13s ease;
+      visibility: hidden;
+    }
+    .hf-tooltip.show {
+      opacity: 1;
+      transform: translateY(0);
+      visibility: visible;
+    }
+    .hf-tt-title {
+      font-weight: 700;
+      color: var(--tooltip-title);
+      margin-bottom: 4px;
+      font-size: 0.85rem;
+      font-family: var(--serif);
+    }
+    .hf-tt-body {
+      color: var(--tooltip-fg);
+      white-space: pre-line;
+    }
+    .hf-tt-foot {
+      margin-top: 6px;
+      padding-top: 5px;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      font-size: 0.72rem;
+      color: var(--tooltip-foot);
+    }
+
+    /* 轻量化印章风格 Toast 提示 */
+    .hf-toast {
+      position: fixed;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-12px);
+      z-index: 9998;
+      padding: 8px 16px;
+      border-radius: 999px;
+      border: 1px solid var(--gold-border);
+      background: var(--tooltip-bg);
+      color: var(--tooltip-fg);
+      font-size: 0.82rem;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+    .hf-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ================================================================
+     * 移动端深度适配（<= 680px：单行滑动导航、2x2音系、单行滑动诗签、
+     * 5字一排诗格、防 iOS 自动放大、原生抽屉底部弹窗、刘海安全区）
+     * ================================================================ */
+    @media (max-width: 680px) {
+      .wrap {
+        padding: 12px 12px calc(36px + env(safe-area-inset-bottom, 0px));
+      }
+      header {
+        gap: 8px;
+        padding-bottom: 11px;
+        margin-bottom: 10px;
+      }
+      .brand { width: 100%; }
+      .brand h1 {
+        font-size: 1.24rem;
+        letter-spacing: 0.03em;
+      }
+      .brand p {
+        margin-top: 3px;
+        font-size: 0.75rem;
+        line-height: 1.4;
+      }
+      .header-right {
+        width: 100%;
+        gap: 6px;
+      }
+      .badges {
+        width: 100%;
+        gap: 5px;
+      }
+      .badge {
+        font-size: 0.7rem;
+        padding: 3px 8px;
+      }
+      .theme-switcher {
+        width: 100%;
+        justify-content: space-between;
+        padding: 3px 5px;
+      }
+      .theme-btn {
+        flex: 1;
+        justify-content: center;
+        padding: 4px 6px;
+        font-size: 0.74rem;
+      }
+
+      /* 单行横向滑动导航栏，释放首屏核心操作空间 */
+      .main-nav {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        max-width: 100%;
+        min-width: 0;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        gap: 6px;
+        margin-bottom: 12px;
+        padding-bottom: 2px;
+      }
+      .main-nav::-webkit-scrollbar { display: none; }
+      .nav-spacer { display: none; }
+      .nav-tab,
+      .nav-wall-btn,
+      #pwaInstallBtn,
+      #clearCacheBtn {
+        flex-shrink: 0;
+        white-space: nowrap;
+        padding: 7px 11px;
+        font-size: 0.81rem;
+        border-radius: 8px;
+      }
+
+      .grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+      .card {
+        padding: 13px 13px;
+        border-radius: 11px;
+        min-width: 0;
+        max-width: 100%;
+      }
+      .card h2 {
+        font-size: 0.94rem;
+        margin-bottom: 10px;
+        gap: 4px;
+      }
+
+      /* 2×2 紧凑音系卡片，首屏高度省一半 */
+      .era-tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+        margin-bottom: 9px;
+      }
+      .era-btn {
+        min-width: 0;
+        padding: 7px 8px;
+        border-radius: 8px;
+      }
+      .era-btn strong {
+        font-size: 0.8rem;
+        line-height: 1.3;
+      }
+      .era-btn > span {
+        display: block;
+        margin-top: 2px;
+        font-size: 0.67rem;
+        line-height: 1.32;
+      }
+      .era-btn .term {
+        display: inline;
+        font-size: inherit;
+        color: inherit;
+      }
+
+      /* 单行横滑古诗预设条 */
+      .presets {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        max-width: 100%;
+        min-width: 0;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        gap: 6px;
+        margin-bottom: 9px;
+        padding-bottom: 2px;
+      }
+      .presets::-webkit-scrollbar { display: none; }
+      .preset-chip {
+        flex-shrink: 0;
+        white-space: nowrap;
+        padding: 5px 10px;
+        font-size: 0.76rem;
+      }
+
+      /* 防止 iOS Safari 聚焦输入框自动缩放页面 (>=16px) */
+      textarea, input[type="text"], input[type="email"], select {
+        font-size: 16px;
+        padding: 9px 10px;
+      }
+      textarea#textInput {
+        min-height: 86px;
+        font-size: 16px;
+        line-height: 1.6;
+      }
+
+      /* 2列音色+精度 + 满宽语速滑块 */
+      .controls-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 9px;
+      }
+      .controls-row .field:nth-child(3) {
+        grid-column: 1 / -1;
+      }
+      input[type="range"] {
+        height: 28px;
+      }
+
+      /* 主合成按钮满宽易点按 */
+      .actions {
+        margin-top: 11px;
+        gap: 7px;
+      }
+      #synthBtn {
+        width: 100%;
+        min-height: 44px;
+        font-size: 0.96rem;
+      }
+      #downloadLink,
+      #jumpCompareBtn {
+        flex: 1;
+        justify-content: center;
+        min-height: 38px;
+      }
+
+      /* 播放区紧凑排布 */
+      .gpu-prompt-bar {
+        padding: 8px 10px;
+        font-size: 0.76rem;
+      }
+      canvas#waveCanvas {
+        height: 68px;
+        margin-bottom: 8px;
+      }
+      .audio-action-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 7px;
+      }
+      .audio-action-row audio {
+        width: 100%;
+        min-width: 0;
+      }
+      #openFeedbackModalBtn {
+        width: 100%;
+        min-height: 40px;
+        justify-content: center;
+      }
+      .metrics {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 5px;
+      }
+      .metric {
+        padding: 6px 3px;
+        border-radius: 7px;
+      }
+      .metric .k { font-size: 0.64rem; }
+      .metric .v { font-size: 0.76rem; }
+
+      /* 逐字调音：每行整齐排 5 字（贴合五言绝句版式） */
+      .gloss-card { margin-top: 12px; }
+      .gloss-ribbon {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 5px;
+      }
+      .char-box {
+        min-width: 0;
+        padding: 6px 2px 5px;
+        border-radius: 7px;
+      }
+      .char-box .edit-dot { top: 2px; right: 3px; font-size: 0.56rem; }
+      .char-box .hz { font-size: 1.12rem; }
+      .char-box .ipa {
+        font-size: 0.62rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .char-box .tok {
+        font-size: 0.54rem;
+        max-width: 100%;
+      }
+
+      /* 全韵系音库：手机 2 列紧凑卡片 */
+      .rhyme-search { max-width: 100%; }
+      .rhyme-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 7px;
+      }
+      .rhyme-card { padding: 9px 9px; }
+      .rhyme-head { flex-wrap: wrap; gap: 2px 6px; }
+      .rhyme-name { font-size: 0.84rem; }
+      .rhyme-sample { font-size: 1.02rem; letter-spacing: 0.06em; }
+      .rhyme-card .btn-sm {
+        padding: 5px 6px;
+        font-size: 0.72rem;
+        white-space: nowrap;
+      }
+      .rhyme-player-bar {
+        padding: 9px 10px;
+        gap: 8px;
+      }
+      .rhyme-player-bar audio { min-width: 100%; }
+      .hf-toast {
+        max-width: calc(100vw - 24px);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 0.78rem;
+        padding: 7px 14px;
+      }
+
+      /* 历史与对比页 */
+      canvas#compareCanvas { height: 185px; }
+      .cmp-metrics-table {
+        display: block;
+        max-width: 100%;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+      .hist-meta { min-width: 0; width: 100%; }
+
+      /* 设计理念表格可横向滑动防溢出 */
+      .about-hero { padding: 14px 14px; }
+      .about-hero h2 { font-size: 1.12rem; }
+      .about-card { padding: 14px 13px; min-width: 0; max-width: 100%; }
+      .about-table {
+        display: block;
+        max-width: 100%;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+
+      /* 原生风格底部抽屉弹窗 */
+      .modal-backdrop {
+        align-items: flex-end;
+        padding: 0;
+      }
+      .modal,
+      .modal.modal-wide,
+      .modal.modal-narrow {
+        max-width: 100%;
+        width: 100%;
+        max-height: 86dvh;
+        border-radius: 16px 16px 0 0;
+        border-left: none;
+        border-right: none;
+        border-bottom: none;
+        padding: 16px 15px calc(18px + env(safe-area-inset-bottom, 0px));
+      }
+      .wall-list { grid-template-columns: 1fr; }
+      .hf-tooltip {
+        max-width: min(310px, calc(100vw - 20px));
+        font-size: 0.78rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <h1>汉火三代古音 · 拟音与听审工作台</h1>
+        <p>上古先秦 · 中古唐宋 · 近古明清 · 本机即刻试听、逐字调音与全韵音库（悬浮虚线术语可看释义）</p>
+      </div>
+      <div class="header-right">
+        <div class="badges">
+          <span id="backendBadge" class="badge wasm">⚙ 纯处理器推理</span>
+          <span id="cacheBadge" class="badge">💾 语音库准备中</span>
+        </div>
+        <div class="theme-switcher" role="group" aria-label="传统色主题切换">
+          <button type="button" class="theme-btn active" data-theme-set="xuanzhi"><span class="theme-dot" style="background:#f7f4ed;border-color:#c34435;"></span>宣纸</button>
+          <button type="button" class="theme-btn" data-theme-set="xuanmo"><span class="theme-dot" style="background:#14131a;border-color:#d8574a;"></span>玄墨</button>
+          <button type="button" class="theme-btn" data-theme-set="qingci"><span class="theme-dot" style="background:#e8f0ec;border-color:#1a6840;"></span>青瓷</button>
+          <button type="button" class="theme-btn" data-theme-set="canghai"><span class="theme-dot" style="background:#0d1822;border-color:#dc5e41;"></span>沧海</button>
+        </div>
+      </div>
+    </header>
+
+    <nav class="main-nav">
+      <button type="button" class="nav-tab active" data-view="studio">🎙 诗词拟音与调音</button>
+      <button type="button" class="nav-tab" data-view="history" id="histNavTab">🕒 历史与波形对比 (0)</button>
+      <button type="button" class="nav-tab" data-view="rhymes">📚 全韵系音库试听</button>
+      <button type="button" class="nav-tab" data-view="about">📖 设计理念</button>
+      <button type="button" id="openWallModalBtn" class="nav-wall-btn">💭 评论列表</button>
+      <span class="nav-spacer"></span>
+      <button type="button" id="pwaInstallBtn" class="btn-secondary btn-sm" style="display:none;" data-tip-title="安装为离线桌面应用" data-tip-body="安装后可从手机桌面或电脑开始菜单一键启动，支持离线 0ms 秒开古音工作台。">📲 安装应用</button>
+      <button type="button" id="clearCacheBtn" class="btn-secondary btn-sm" data-tip-title="重置本地语音库" data-tip-body="清除已保存在本机浏览器中的语音数据并重新下载。一般无需操作。">🗑 重置本地语音库</button>
+    </nav>
+
+    <!-- ===================== 视图 1：诗词拟音与调音工作台 ===================== -->
+    <div id="view-studio" class="view-panel active">
+      <div class="grid">
+        <section class="card">
+          <h2>
+            <span>壹 · 历史音系与诗文输入</span>
+            <span style="font-size:0.76rem;color:var(--muted);font-weight:400;">悬浮汉字看详解 · 点击可实时调音</span>
+          </h2>
+
+          <div class="era-tabs" id="eraTabs">
+            <button type="button" class="era-btn" data-era="oc">
+              <strong><span class="term" data-term="上古音">上古音</span> · <span class="term" data-term="汉火体系">汉火体系</span></strong>
+              <span>先秦两汉《诗经》· <span class="term" data-term="清鼻流音">清鼻流音</span> / <span class="term" data-term="-p -t -k -m">-p -t -k -m 韵尾</span></span>
+            </button>
+            <button type="button" class="era-btn active" data-era="mc">
+              <strong><span class="term" data-term="中古音">中古音</span> · <span class="term" data-term="切韻">切韻</span><span class="term" data-term="廣韻">廣韻</span></strong>
+              <span>隋唐宋<span class="term" data-term="三十八母">三十八母</span> · 245 <span class="term" data-term="韵类">韵类</span> · <span class="term" data-term="四声八调">四声八调</span></span>
+            </button>
+            <button type="button" class="era-btn" data-era="em">
+              <strong><span class="term" data-term="近古音">近古音</span> · <span class="term" data-term="明清五声雅音">明清五声雅音</span></strong>
+              <span>明清官话读书音 · <span class="term" data-term="尖团分明">尖团分明</span> / <span class="term" data-term="疑母">疑</span><span class="term" data-term="微母">微母</span> / <span class="term" data-term="短入声">短入声</span></span>
+            </button>
+            <button type="button" class="era-btn" data-era="em_zyyy">
+              <strong><span class="term" data-term="近古北音">近古北音</span> · <span class="term" data-term="中原音韻">中原音韵</span></strong>
+              <span>元曲大都北音 · <span class="term" data-term="十九韵部">十九韵部</span> / <span class="term" data-term="入派三声">入派三声</span></span>
+            </button>
+          </div>
+
+          <div class="presets">
+            <button type="button" class="preset-chip" data-era="mc" data-text="床前明月光，疑是地上霜。舉頭望明月，低頭思故鄉。">中古《靜夜思》</button>
+            <button type="button" class="preset-chip" data-era="mc" data-text="春眠不覺曉，[處=昌開三魚去]處聞啼鳥。夜來風雨聲，花落知多少。">中古《春曉》</button>
+            <button type="button" class="preset-chip" data-era="mc" data-text="千山鳥飛絕，萬徑人蹤滅。孤舟蓑笠翁，獨釣寒江雪。">中古《江雪》</button>
+            <button type="button" class="preset-chip" data-era="mc" data-text="青箬笠，綠蓑衣，斜風細雨不須歸。">中古《漁歌子》</button>
+            <button type="button" class="preset-chip" data-era="mc" data-text="安得廣廈千萬間，大庇天下寒士俱歡顏。">中古《茅屋名句》</button>
+            <button type="button" class="preset-chip" data-era="mc" data-text="月黑雁飛高，單于夜遁逃。欲將輕[騎=去]逐，大雪滿弓刀。">中古《塞下曲》</button>
+            <button type="button" class="preset-chip" data-era="oc" data-text="蒹葭蒼蒼，白露為霜。所謂伊人，在水一方。">上古《蒹葭》</button>
+            <button type="button" class="preset-chip" data-era="oc" data-text="昔我往矣，楊柳依依。今我來思，雨雪霏霏。">上古《采薇》</button>
+            <button type="button" class="preset-chip" data-era="em" data-text="桃花塢裏桃花庵，桃花庵下桃花仙。桃花仙人[種=tʂuŋh]桃樹，又摘桃花換酒錢。">近古《桃花庵歌》</button>
+            <button type="button" class="preset-chip" data-era="em" data-text="滾滾長江東逝水，浪花淘盡英雄。是非成敗轉頭空。青山依舊在，幾度夕陽紅。">近古《臨江仙》</button>
+          </div>
+
+          <textarea id="textInput" spellcheck="false">床前明月光，疑是地上霜。舉頭望明月，低頭思故鄉。</textarea>
+
+          <div class="controls-row">
+            <div class="field">
+              <label for="voiceSelect">朗读音色</label>
+              <select id="voiceSelect">
+                <option value="male_128Hz">沉稳雅言男声</option>
+                <option value="female_252Hz">清朗知性女声</option>
+                <option value="custom">上传自定义参考人声...</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="stepsSelect">音质精细度</label>
+              <select id="stepsSelect">
+                <option value="8">快速草稿（耗时更短）</option>
+                <option value="12">标准均衡</option>
+                <option value="16" selected>精细自然（推荐）</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="speedRange">拟音语速倍率: <span id="speedVal">1.00x</span></label>
+              <input type="range" id="speedRange" min="0.75" max="1.30" step="0.05" value="1.00" />
+            </div>
+          </div>
+
+          <div id="customUploadBox" class="custom-upload">
+            <label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:6px;">
+              选择 3~6 秒清晰的单人朗读音频，系统将自动提取音色特征用于古音拟音：
+            </label>
+            <input type="file" id="customAudioFile" accept="audio/*" />
+            <div id="customAudioInfo" style="font-size:0.76rem;color:var(--jade);margin-top:5px;"></div>
+          </div>
+
+          <div class="actions">
+            <button type="button" id="synthBtn" class="btn-primary">开始古音拟音合成</button>
+            <a id="downloadLink" class="btn-secondary" style="display:none;" download="hanfire_ancient.wav">⬇ 下载音频</a>
+            <button type="button" id="jumpCompareBtn" class="btn-secondary" style="display:none;">📊 历史 / 波形对比</button>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>
+            <span>贰 · 声音波形与播放</span>
+            <span style="font-size:0.76rem;color:var(--muted);font-weight:400;">高清古音波形预览</span>
+          </h2>
+
+          <div id="gpuPromptBar" class="gpu-prompt-bar">
+            <span id="gpuPromptText">⚡ 检测到本机支持显卡加速（显存充足），可提速 2~4 倍</span>
+            <div class="gpu-prompt-actions">
+              <button type="button" id="switchToGpuBtn" class="btn-primary btn-sm">⚡ 切换显卡加速</button>
+              <button type="button" id="dismissGpuPromptBtn" class="btn-secondary btn-sm">暂不</button>
+            </div>
+          </div>
+
+          <div id="fallbackNote" class="fallback-note"></div>
+
+          <div class="progress-box">
+            <div class="status-line">
+              <span id="statusText">古音工作台已就绪，正在后台加载古音词典...</span>
+              <span id="pctText">就绪</span>
+            </div>
+            <div class="bar-bg">
+              <div id="barFill" class="bar-fill"></div>
+            </div>
+          </div>
+
+          <canvas id="waveCanvas" width="640" height="110"></canvas>
+          <div class="audio-action-row">
+            <audio id="audioPlayer" controls></audio>
+            <button type="button" id="openFeedbackModalBtn" class="btn-accent" data-tip-title="听感评论与读音纠正" data-tip-body="为当前合成的古音打分、写听感评论或提交读音纠正建议。">💬 评论打分</button>
+          </div>
+
+          <div class="metrics">
+            <div class="metric">
+              <div class="k">运行方式</div>
+              <div class="v" id="mBackend">—</div>
+            </div>
+            <div class="metric">
+              <div class="k">音频时长</div>
+              <div class="v" id="mDur">—</div>
+            </div>
+            <div class="metric">
+              <div class="k">生成耗时</div>
+              <div class="v" id="mTime">—</div>
+            </div>
+            <div class="metric">
+              <div class="k">生成速度</div>
+              <div class="v" id="mRtf">—</div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- 逐字可点击调音卡片 -->
+      <section class="card gloss-card">
+        <h2>
+          <span>叁 · 逐字古音拟音与调音（鼠标悬浮看音韵详解 · 点击可改读音）</span>
+          <span id="glossCount" style="font-size:0.76rem;color:var(--muted);font-weight:400;">等待古音词典加载...</span>
+        </h2>
+        <div id="adjBanner" class="adj-banner">
+          <span id="adjSummary"></span>
+          <div style="display:flex;gap:6px;">
+            <button type="button" id="syncAdjToFbBtn" class="btn-secondary btn-sm">💬 带入调音去评论</button>
+            <button type="button" id="clearAdjBtn" class="btn-secondary btn-sm">清空调音记录</button>
+          </div>
+        </div>
+        <div id="glossRibbon" class="gloss-ribbon">
+          <span style="color:var(--muted);font-size:0.84rem;">加载古音词典后将自动展示每个汉字的拟音，鼠标悬浮查看释义，点击任意字即可调整读音。</span>
+        </div>
+      </section>
+    </div>
+
+    <!-- ===================== 视图 2：全韵系音库试听 ===================== -->
+    <div id="view-rhymes" class="view-panel">
+      <section class="card">
+        <h2>
+          <span>📚 三代四音系全韵表 · 悬浮看释义，点击直接试听每个<span class="term" data-term="韵部">韵部</span></span>
+          <span id="rhymeCountBadge" style="font-size:0.78rem;color:var(--muted);font-weight:400;">加载中...</span>
+        </h2>
+
+        <div id="rhymePlayerBar" class="rhyme-player-bar">
+          <div style="min-width:190px;">
+            <div id="rpTitle" style="font-weight:700;color:var(--gold);font-size:0.9rem;"></div>
+            <div id="rpStatus" style="font-size:0.76rem;color:var(--muted);"></div>
+          </div>
+          <audio id="rhymeAudio" controls style="flex:1;min-width:220px;margin:0;"></audio>
+          <a id="rhymeDownload" class="btn-secondary btn-sm" style="display:none;" download="rhyme.wav">⬇ 下载</a>
+          <button type="button" id="rpRateBtn" class="btn-primary btn-sm">★ 给本韵打分/纠错</button>
+        </div>
+
+        <div class="rhyme-toolbar">
+          <div class="rhyme-era-pills" id="rhymeEraPills">
+            <button type="button" class="pill-btn active" data-rera="mc"><span class="term" data-term="切韻">中古切韻</span> (<span class="term" data-term="十六攝">16攝</span>)</button>
+            <button type="button" class="pill-btn" data-rera="oc"><span class="term" data-term="上古音">上古漢火</span> (<span class="term" data-term="30部">30部</span>)</button>
+            <button type="button" class="pill-btn" data-rera="em"><span class="term" data-term="明清五声雅音">近古明清</span> (19部)</button>
+            <button type="button" class="pill-btn" data-rera="em_zyyy"><span class="term" data-term="中原音韻">中原音韻</span> (<span class="term" data-term="十九韵部">19部</span>)</button>
+          </div>
+          <label id="mcDetailWrap" style="display:inline-flex;align-items:center;gap:5px;font-size:0.8rem;color:var(--gold);cursor:pointer;">
+            <input type="checkbox" id="mcDetailToggle" />
+            展开全部 245 个<span class="term" data-term="小韵">切韵小韵类</span>
+          </label>
+          <input type="text" id="rhymeSearch" class="rhyme-search" placeholder="搜索汉字 / 韵目 / 拟音 (如 雪、-p、魚)..." />
+        </div>
+
+        <div id="rhymeCatalogContainer"></div>
+      </section>
+    </div>
+
+    <!-- ===================== 视图 3：合成历史与双轨波形图对比 ===================== -->
+    <div id="view-history" class="view-panel">
+      <section class="card" style="margin-bottom:18px;">
+        <h2>
+          <span>📊 双轨声音波形图与响度对比 (A vs B)</span>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+            <select id="cmpModeSel" style="width:auto;padding:4px 8px;font-size:0.78rem;">
+              <option value="split">上下双轨对齐波形</option>
+              <option value="overlay">叠合响度曲线 (dB)</option>
+            </select>
+            <select id="cmpAxisSel" style="width:auto;padding:4px 8px;font-size:0.78rem;">
+              <option value="abs">按绝对时间对齐 (秒)</option>
+              <option value="rel">按相对进度对齐 (0~100%)</option>
+            </select>
+          </div>
+        </h2>
+
+        <div class="cmp-controls">
+          <div class="cmp-slot slot-a">
+            <div class="cmp-slot-head">
+              <span style="color:var(--gold);">● 轨 A（金色）</span>
+              <label class="btn-secondary btn-sm" style="cursor:pointer;">
+                📁 上传本地音频
+                <input type="file" id="cmpFileA" accept="audio/*" style="display:none;" />
+              </label>
+            </div>
+            <select id="cmpSelA"><option value="">从合成历史选择轨 A...</option></select>
+          </div>
+
+          <div class="cmp-slot slot-b">
+            <div class="cmp-slot-head">
+              <span style="color:#7fe0b8;">● 轨 B（翡翠绿）</span>
+              <label class="btn-secondary btn-sm" style="cursor:pointer;">
+                📁 上传本地音频
+                <input type="file" id="cmpFileB" accept="audio/*" style="display:none;" />
+              </label>
+            </div>
+            <select id="cmpSelB"><option value="">从合成历史选择轨 B...</option></select>
+          </div>
+        </div>
+
+        <canvas id="compareCanvas" width="1060" height="240"></canvas>
+
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;">
+          <button type="button" id="cmpPlayABtn" class="btn-secondary btn-sm">▶ 播轨 A</button>
+          <button type="button" id="cmpPlayBBtn" class="btn-secondary btn-sm">▶ 播轨 B</button>
+          <button type="button" id="cmpPlayABBtn" class="btn-primary btn-sm">🔁 A → B 连播对比</button>
+          <span id="cmpSimBadge" class="badge" style="margin-left:auto;">等待选择 A/B 音频</span>
+        </div>
+
+        <audio id="cmpAudio" controls style="display:none;height:34px;margin:4px 0 8px;"></audio>
+
+        <table class="cmp-metrics-table">
+          <thead>
+            <tr>
+              <th>轨道</th>
+              <th>时长</th>
+              <th>最大音量</th>
+              <th>平均响度</th>
+              <th>声音平滑度</th>
+              <th>停顿占比</th>
+            </tr>
+          </thead>
+          <tbody id="cmpMetricsBody">
+            <tr><td colspan="6" style="color:var(--muted);text-align:center;">合成至少 2 段音频（或上传本地参考音），即可直观对比波形、时长、停顿位置与声音平稳度。</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <h2>
+          <span>🕒 本地合成历史记录（自动保存在本机，刷新保留最近 20 条）</span>
+          <button type="button" id="clearHistBtn" class="btn-secondary btn-sm">🗑 清空历史</button>
+        </h2>
+        <div id="histList" class="hist-list">
+          <div style="color:var(--muted);font-size:0.85rem;">暂无合成记录。在「诗词拟音」或「全韵系音库」生成音频后会自动保存在此，随时可回放、下载或加入波形对比。</div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ===================== 视图 4：设计理念与音韵体系介绍页 ===================== -->
+    <div id="view-about" class="view-panel">
+      <div class="about-hero">
+        <h2>🔥 汉火古音 · 为什么这样设计？</h2>
+        <p>
+          汉语古音拟音最大的难点，不是“把<span class="term" data-term="IPA">国际音标</span>字母拼读出来”，而是<strong>同时守住历史音韵学的严谨性</strong>与<strong>真人朗读的自然韵律</strong>。
+          汉火古音将<span class="term" data-term="上古音">上古</span>、<span class="term" data-term="中古音">中古</span>、<span class="term" data-term="近古音">近古</span>三代音韵规律与人声合成深度融合，重点攻克古音合成最常见的四大顽疾：多拍裂音、押韵漂移、开闭口混乱与杂音断句。（页面中所有带虚线下划线的音韵术语，鼠标悬浮均可查看白话释义）
+        </p>
+      </div>
+
+      <div class="about-grid">
+        <article class="about-card">
+          <h3>一、为什么坚持「<span class="term" data-term="一字一音">一字一音</span>」？（<span class="term" data-term="单核4槽">单核 4 槽</span>音节结构）</h3>
+          <p>
+            学术拟音里常出现复杂的多合元音或复辅音（如上古 <code>keau / ʔiei / ɣiwəi</code>）。如果直接按字母逐个拼接发音，一个汉字往往会被拖裂成两三拍（例如把「舉」读成 <em>ji+ü</em>、「須」读成 <em>思+与</em>、「俱」裂成 <em>gui</em>、把句首的「安」读成 <em>安安</em>）。
+          </p>
+          <ul>
+            <li><strong><span class="term" data-term="单核4槽">单核 4 槽</span>严格归并</strong>：每个汉字在发音前都固定归并为一个完整音节：<code>[<span class="term" data-term="声母">声母</span> | <span class="term" data-term="介音">介音</span> | 唯一<span class="term" data-term="韵腹">韵腹</span> | <span class="term" data-term="韵尾">韵尾</span>]</code>，严守诗词格律一字一拍。</li>
+            <li><strong>简繁古籍全覆盖零漏字</strong>：内置双向简繁与古籍异体字对应（如 <code>滾→袞</code>、<code>裏→裡</code>、<code>間→閒</code>、<code>爲→為</code>），保证任意诗文不吞字、不漏字。</li>
+            <li><strong><span class="term" data-term="鱼/虞分流">魚/虞分流</span>防裂音</strong>：中古<span class="term" data-term="精组">精组</span><span class="term" data-term="魚韵">魚</span><span class="term" data-term="虞韵">虞</span>（<code>須/徐/聚</code>）与<span class="term" data-term="见组">见组</span><span class="term" data-term="魚韵">魚韵</span>（<code>舉/去/渠</code>）采用干净的纯<span class="term" data-term="撮口">撮口</span>发声，而<span class="term" data-term="见组">见组</span><span class="term" data-term="虞韵">虞韵</span>（<code>俱/拘/驅</code>）保持圆唇收束，彻底杜绝双音裂变。</li>
+            <li><strong>句首<span class="term" data-term="零声母">零声母</span>自然起音</strong>：句首<span class="term" data-term="开口">开口</span>零声母字（如 <code>安/庵/翁/哀</code>）直接平稳起音，不再把句首「安」拉裂成两声。</li>
+          </ul>
+          <div class="demo-row">
+            <button type="button" class="btn-secondary btn-sm about-demo" data-era="mc" data-text="安得廣廈千萬間，大庇天下寒士俱歡顏。">▶ 试听「安得…寒士俱歡顏」</button>
+            <button type="button" class="btn-secondary btn-sm about-demo" data-era="mc" data-text="青箬笠，綠蓑衣，斜風細雨不須歸。">▶ 试听「斜風細雨不須歸」</button>
+          </div>
+        </article>
+
+        <article class="about-card">
+          <h3>二、为什么能「真押韵」？（三代韵核锁定与<span class="term" data-term="舒长入短">舒长入短</span>）</h3>
+          <p>
+            如果用现代普通话去近似拼读古音，唐诗与《诗经》原本严丝合缝的押韵就会大面积失效（例如「絕/滅/雪」「光/霜/鄉」「庵/仙/錢」听起来互不押韵）。
+          </p>
+          <ul>
+            <li><strong><span class="term" data-term="上古音">上古</span> <span class="term" data-term="30部">30 韵部</span><span class="term" data-term="阴阳入对转">阴阳入对转</span>（<span class="term" data-term="王力体系">王力体系</span>）</strong>：清晰区分 <code>-m/-n/-ŋ</code> 与 <code>-p/-t/-k</code>，真部 <code>人/民/信</code> 归 <code>-in</code>，元部 <code>-r</code> 与 <code>-n</code> 自然通押。</li>
+            <li><strong><span class="term" data-term="中古音">中古</span> <span class="term" data-term="十六攝">16 摄</span> 245 <span class="term" data-term="韵类">韵类</span>精准归核</strong>：严格锁定同韵字主元音，使 <code>先/仙</code> <span class="term" data-term="入声">入声</span>（<code>絕/滅/雪</code>）同押 <code>-jɛt</code>，<code>侵/緝</code> 入声（<code>笠</code>）保持清晰<span class="term" data-term="细音">细音</span>不退化为「了」。</li>
+            <li><strong><span class="term" data-term="近古音">近古</span><span class="term" data-term="明清五声雅音">明清 19 韵与五声</span></strong>：保留独立<span class="term" data-term="短入声">短入声</span>，还原寒山<span class="term" data-term="二等">二等</span><span class="term" data-term="未颚化">未颚化</span>（<code>間/顏</code> 押 <code>-an</code>）及明代 <code>-m→-n</code> 演变（<code>庵/仙/錢</code> 同押）。</li>
+            <li><strong><span class="term" data-term="舒长入短">舒长入短</span>格律节奏</strong>：句末<span class="term" data-term="舒声">舒声</span>韵脚自然舒展延长；<span class="term" data-term="入声">入声</span>韵脚保持短促利落，绝不把短入声拖成长音。</li>
+          </ul>
+          <div class="demo-row">
+            <button type="button" class="btn-secondary btn-sm about-demo" data-era="mc" data-text="千山鳥飛絕，萬徑人蹤滅。孤舟蓑笠翁，獨釣寒江雪。">▶ 试听中古入声押韵《江雪》</button>
+            <button type="button" class="btn-secondary btn-sm about-demo" data-era="oc" data-text="蒹葭蒼蒼，白露為霜。所謂伊人，在水一方。">▶ 试听上古陽部《蒹葭》</button>
+            <button type="button" class="btn-secondary btn-sm about-demo" data-era="em" data-text="桃花塢裏桃花庵，桃花庵下桃花仙。桃花仙人[種=tʂuŋh]桃樹，又摘桃花換酒錢。">▶ 试听明清五声《桃花庵歌》</button>
+          </div>
+        </article>
+
+        <article class="about-card">
+          <h3>三、开闭口、<span class="term" data-term="四呼">四呼</span>与<span class="term" data-term="入声">入声</span>塞尾的精细雕琢</h3>
+          <p>
+            古音听起来是否纯正自然、不像“怪味普通话”，关键藏在<strong><span class="term" data-term="开口">开口</span>/<span class="term" data-term="合口">合口</span>/<span class="term" data-term="细音">细音</span>（<span class="term" data-term="四呼">四呼</span>）</strong>、<strong><span class="term" data-term="双唇闭口韵">双唇闭口韵</span>（<code>-m/-p</code>）</strong>与<strong><span class="term" data-term="尖团对立">尖团</span>/<span class="term" data-term="全浊">清浊</span></strong>这些细腻的发音特征里：
+          </p>
+          <ul>
+            <li><strong><span class="term" data-term="影母">影母</span>与<span class="term" data-term="云母">云母</span>按<span class="term" data-term="四呼">呼</span>/等精准分派</strong>：<span class="term" data-term="洪音">洪音</span><span class="term" data-term="开口">开口</span>（<code>安/哀/翁</code>）保持纯净零声母，绝不给「笠翁」挂出多余的 <em>y</em> 杂音；<span class="term" data-term="合口">合口</span>（<code>烏/王/為</code>）轻带圆唇；<span class="term" data-term="细音">细音</span>（<code>衣/雨/雲</code>）轻带齐齿滑音，消除「細雨」间的停顿空洞。</li>
+            <li><strong><span class="term" data-term="双唇闭口韵">双唇闭口韵</span> <code>-m / -p</code></strong>：上古侵談与中古深咸摄（<code>心/林/南/鹽/笠/立</code>）保留双唇自然闭拢收尾，与舌尖 <code>-n/-t</code> 清晰区分。</li>
+            <li><strong><span class="term" data-term="唯闭塞尾">唯闭短促入声</span>（不弹音）</strong>：汉语入声塞尾 <code>-p/-t/-k</code> 讲究「<span class="term" data-term="唯闭不除阻">唯闭不除阻</span>」——只收口截断气流而不向外弹气，听感紧促干净，绝不发出刺耳的“咋可”杂音。</li>
+            <li><strong>近古<span class="term" data-term="尖团分明">尖团分明</span> &amp; 中古<span class="term" data-term="崇母">崇母</span><span class="term" data-term="擦化">擦化</span></strong>：明清雅音保留<span class="term" data-term="尖音">尖音</span>（<code>清/秋/千/酒/仙</code>）与<span class="term" data-term="团音">团音</span>（<code>輕/江</code>）对立及<span class="term" data-term="微母">微母</span>、<span class="term" data-term="疑母">疑母</span>；中古崇母止摄仄声（<code>士/仕/事</code>）遵循盛中唐<span class="term" data-term="擦化">擦化</span>与<span class="term" data-term="浊上变去">浊上变去</span>规律，避免「寒士」读断。</li>
+          </ul>
+          <div class="demo-row">
+            <button type="button" class="btn-secondary btn-sm about-demo" data-era="em" data-text="清風明月，輕風明月。千金買酒，文武萬物。">▶ 试听尖团对立与微母</button>
+            <button type="button" class="btn-secondary btn-sm about-demo" data-era="mc" data-text="東董送屋，同動洞獨。深審滲十，仙獮線薛。">▶ 试听八调与 -m/-p/-n/-t</button>
+          </div>
+        </article>
+
+        <article class="about-card">
+          <h3>四、纯净人声、本机直算与众包快速勘误</h3>
+          <ul>
+            <li><strong>原生棚录参考声，纯净防破音</strong>：采用未经变速拉扯的录音室纯干声作为音色基准，彻底消除传统古音合成常见的“句首杂音”“电子金属声”与刺耳削波破音。</li>
+            <li><strong>稳定韵律，告别随机断句</strong>：整套发声过程采用确定性节奏控制，不会因为随机波动而在诗句中间突然卡壳断句，每次生成都稳健如一。</li>
+            <li><strong>直接在你的设备本地运行，隐私安全</strong>：所有古音合成都在你的浏览器本地完成（有显卡自动启用显卡加速，无显卡自动回落多核处理器），诗文与自定义参考人声均无需上传云端；首次加载语音库后会自动留存本机，下次打开瞬间就绪。</li>
+            <li><strong>众包听审，单字快速迭代</strong>：当你发现某个字读音不够准确，可直接点击汉字卡片实时调音试听，并一键提交纠正建议；站长采纳后只需更新词典即可快速全站生效。</li>
+          </ul>
+          <table class="about-table">
+            <thead>
+              <tr><th>维度</th><th>传统字母拼接古音</th><th>汉火古音引擎</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>音节节奏</td><td>多合元音易裂为 2~3 拍</td><td><span class="term" data-term="单核4槽">单核 4 槽</span>严格<span class="term" data-term="一字一音">一字一音</span></td></tr>
+              <tr><td>诗歌押韵</td><td>韵母漂移、入声乱拖</td><td>三代韵核锁定 + <span class="term" data-term="舒长入短">舒长入短</span></td></tr>
+              <tr><td>开闭口/四呼</td><td>影云母混读、洪细不分</td><td>按<span class="term" data-term="四呼">呼</span>/等精准分派 + <span class="term" data-term="双唇闭口韵">闭口</span> <code>-m/-p</code></td></tr>
+              <tr><td>纠错迭代</td><td>改一字耗时漫长</td><td>前端实时调音 + 词典快速更新</td></tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="about-card" id="gpuGuideSection" style="grid-column: 1 / -1;">
+          <h3>⚡ 五、如何开启浏览器显卡加速（提速 3~5 倍）</h3>
+          <p>
+            本工作台支持直接调用你电脑的显卡进行本地古音合成。右上角显示 <strong>「⚡ 显卡加速开启」</strong> 时，整首四句唐诗仅需约 <strong>8~13 秒</strong> 即可生成；若显示 <strong>「⚙ 纯处理器推理」</strong>，说明浏览器尚未开放显卡加速接口，按下面对应系统开启一次即可：
+          </p>
+          <div class="about-grid" style="margin-top:10px;gap:12px;">
+            <div style="background:var(--panel-alt);border:1px solid var(--border);border-radius:9px;padding:12px 14px;">
+              <strong style="color:var(--gold);display:block;margin-bottom:6px;">🪟 Windows（Chrome / Edge）</strong>
+              <ul style="margin:0;padding-left:18px;">
+                <li>打开浏览器设置 → <strong>系统</strong> → 开启「<strong>使用图形加速功能</strong>」。</li>
+                <li>地址栏打开 <code>chrome://flags/#use-angle</code>（Edge 为 <code>edge://flags/#use-angle</code>），确认设为 <strong>Default</strong> 或 <strong>D3D11</strong>，重启浏览器。</li>
+                <li>双显卡笔记本可在系统「显示 → 图形」设置中将浏览器指定为<strong>高性能独显</strong>。</li>
+              </ul>
+            </div>
+            <div style="background:var(--panel-alt);border:1px solid var(--border);border-radius:9px;padding:12px 14px;">
+              <strong style="color:var(--gold);display:block;margin-bottom:6px;">🍎 macOS（M 系列 / Intel）</strong>
+              <ul style="margin:0;padding-left:18px;">
+                <li>使用新版 <strong>Chrome / Edge</strong> 打开本站默认即自动启用显卡加速，无需额外设置。</li>
+                <li>若用旧版浏览器或手机访问，系统会自动平滑切换到多核处理器运行，音质完全一致。</li>
+              </ul>
+            </div>
+            <div style="background:var(--panel-alt);border:1px solid var(--border);border-radius:9px;padding:12px 14px;">
+              <strong style="color:var(--gold);display:block;margin-bottom:6px;">🐧 Linux（Chrome / Chromium / Edge）</strong>
+              <ul style="margin:0;padding-left:18px;">
+                <li>Linux 版浏览器默认关闭部分开关，需在地址栏<strong>同时开启以下 3 项</strong>后重启浏览器：</li>
+                <li><code>chrome://flags/#enable-vulkan</code> → <strong>Enabled</strong></li>
+                <li><code>chrome://flags/#enable-unsafe-webgpu</code> → <strong>Enabled</strong></li>
+                <li><code>chrome://flags/#ignore-gpu-blocklist</code> → <strong>Enabled</strong></li>
+              </ul>
+            </div>
+            <div style="background:var(--panel-alt);border:1px solid var(--border);border-radius:9px;padding:12px 14px;">
+              <strong style="color:var(--gold);display:block;margin-bottom:6px;">🔍 常见排查小贴士</strong>
+              <ul style="margin:0;padding-left:18px;">
+                <li>请确保通过 <strong><code>https://</code></strong> 网址访问（浏览器会屏蔽 <code>http://</code> 网页调用显卡）。</li>
+                <li>改完开关后务必点击右下角 <strong>Relaunch</strong> 重启浏览器，再按 <code>Ctrl+F5</code> 刷新本页。</li>
+                <li>在地址栏输入 <code>chrome://gpu</code>，确认 <strong>WebGPU</strong> 显示为 <code>Hardware accelerated</code>（Linux 需同时确认 <strong>Vulkan</strong> 为 <code>Enabled</code>）。</li>
+              </ul>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== 单字可视化调音弹窗 ===================== -->
+  <div id="tunerModal" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="tunerTitle">单字调音</h3>
+        <button type="button" id="tunerCloseBtn" class="btn-secondary btn-sm">✕ 关闭</button>
+      </div>
+      <div id="tunerCurrentInfo" style="font-size:0.8rem;color:var(--muted);margin-bottom:10px;"></div>
+
+      <div class="tuner-tabs" id="tunerTabs">
+        <button type="button" class="pill-btn active" data-tpane="poly" data-tip-title="多音字速选" data-tip-body="列出该汉字在古音词典中收录的全部常见异读（不同声调、韵部或又音），点选即可切换。">多音字速选</button>
+        <button type="button" class="pill-btn" data-tpane="same" data-tip-title="借同音字" data-tip-body="若你想让当前字完全改读成另一个常见字的古音，直接输入那个同音字即可，无需懂国际音标。">借同音字 (同某)</button>
+        <button type="button" class="pill-btn" data-tpane="mc_yun" id="tunerMcYunTab" data-tip-title="中古换韵/换调" data-tip-body="保留原字的中古声母不变，自由更换为切韵 245 韵类与四声八调中的任意组合。">中古换韵/换调</button>
+        <button type="button" class="pill-btn" data-tpane="ipa" data-tip-title="直接改国际音标" data-tip-body="面向熟悉音韵学或国际音标 (IPA) 的听审者，可直接键入拟音拼写与调号微调读音。">直接改读音 (音标)</button>
+      </div>
+
+      <div id="tpane-poly" class="tuner-pane active">
+        <div id="tunerPolyList" class="poly-list"></div>
+      </div>
+
+      <div id="tpane-same" class="tuner-pane">
+        <div class="field">
+          <label for="tunerSameInput">输入一个读音正确的同音字（自动生成「同某」读音替换）</label>
+          <input type="text" id="tunerSameInput" maxlength="2" placeholder="如：絕、維、形" />
+        </div>
+      </div>
+
+      <div id="tpane-mc_yun" class="tuner-pane">
+        <div class="controls-row" style="margin-top:0;">
+          <div class="field">
+            <label for="tunerYunleiSel">目标中古<span class="term" data-term="韵类">韵类</span>（保留原字<span class="term" data-term="声母">声母</span>）</label>
+            <select id="tunerYunleiSel"></select>
+          </div>
+          <div class="field">
+            <label for="tunerToneSel">目标<span class="term" data-term="四声八调">调类</span></label>
+            <select id="tunerToneSel"></select>
+          </div>
+        </div>
+      </div>
+
+      <div id="tpane-ipa" class="tuner-pane">
+        <div class="field" style="margin-bottom:8px;">
+          <label for="tunerIpaInput">直接输入<span class="term" data-term="IPA">国际音标 (IPA)</span> + 调号（如 huɑ1 / kwaŋ1 / tʂuŋh / ɲin / sjak）</label>
+          <input type="text" id="tunerIpaInput" placeholder="如：huɑ1、sjɛ2、kwaŋ1 或 sjak" />
+        </div>
+        <div style="font-size:0.74rem;color:var(--muted);">
+          提示：调号可用 <code>1/2/3/4</code>（阴平/阳平/上声/去声），或用 <code>h/s</code>（去声）、<code>ʔ</code>（上声）、<code>-p/-t/-k</code>（<span class="term" data-term="入声">入声</span>）。
+        </div>
+      </div>
+
+      <div id="tunerPreview" class="tuner-preview">预览：尚未更改</div>
+
+      <div style="margin-top:10px;">
+        <audio id="tunerAudio" controls style="display:none;height:34px;margin:0;"></audio>
+      </div>
+
+      <div class="actions" style="justify-content:space-between;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" id="tunerAuditionBtn" class="btn-secondary">▶ 试听本句效果</button>
+          <button type="button" id="tunerResetBtn" class="btn-secondary">↺ 恢复默认读音</button>
+        </div>
+        <button type="button" id="tunerApplyBtn" class="btn-primary">✓ 应用到诗文</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== 听感评论与读音纠正弹窗 ===================== -->
+  <div class="modal-backdrop" id="feedbackModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="feedbackModalTitle">
+      <div class="modal-head">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <h3 id="feedbackModalTitle">💬 为本次拟音打分与提交读音纠正</h3>
+          <span id="identityPill" class="identity-pill">
+            <span id="identityLabel"></span>
+            <button type="button" id="editIdentityBtn">修改</button>
+          </span>
+        </div>
+        <button type="button" id="feedbackModalClose" class="btn-secondary btn-sm">✕ 关闭</button>
+      </div>
+
+      <div id="fbContext" class="fb-context">当前评审对象：请先点击「开始古音拟音合成」或在「全韵系音库」试听任意韵部后再打分。</div>
+
+      <form id="feedbackForm" autocomplete="on">
+        <input type="text" name="hp_website" id="hpWebsite" class="hp-field" tabindex="-1" autocomplete="off" />
+
+        <div id="identityFields" class="identity-fields">
+          <div class="field">
+            <label for="fbNickname">昵称 *（必填，自动保存在本机，下次免重复填写）</label>
+            <input type="text" id="fbNickname" maxlength="40" placeholder="如：山居听音" required />
+          </div>
+          <div class="field">
+            <label for="fbEmail">邮箱（选填，仅站长后台可见，不会公开）</label>
+            <input type="email" id="fbEmail" maxlength="120" placeholder="可选，便于纠错采纳后联系" />
+          </div>
+        </div>
+
+        <div class="star-row">
+          <span style="font-size:0.82rem;color:var(--muted);">听感打分 *：</span>
+          <div class="stars" id="starPicker">
+            <button type="button" class="star-btn" data-star="1">★</button>
+            <button type="button" class="star-btn" data-star="2">★</button>
+            <button type="button" class="star-btn" data-star="3">★</button>
+            <button type="button" class="star-btn" data-star="4">★</button>
+            <button type="button" class="star-btn" data-star="5">★</button>
+          </div>
+          <span id="starHint" style="font-size:0.8rem;color:var(--gold);">请选择星级</span>
+        </div>
+
+        <div class="field" style="margin-bottom:10px;">
+          <label for="fbIpa"><span class="term" data-term="IPA">国际音标 (IPA)</span> / 读音纠正（选填 · 若你刚才点了单字调音，会自动同步调音记录一并提交）</label>
+          <input type="text" id="fbIpa" maxlength="600" placeholder="例如：[斜=sjɛ2] 或 俱应读 ku1（可选）" />
+        </div>
+
+        <div class="field">
+          <label for="fbComment">听感评论与建议（选填）</label>
+          <div class="quick-tags">
+            <button type="button" class="qtag">音准自然</button>
+            <button type="button" class="qtag">押韵准确</button>
+            <button type="button" class="qtag">声调偏低</button>
+            <button type="button" class="qtag">韵母偏差</button>
+            <button type="button" class="qtag">连读停顿</button>
+            <button type="button" class="qtag">尾字偏短</button>
+            <button type="button" class="qtag">略有杂音</button>
+          </div>
+          <textarea id="fbComment" rows="3" maxlength="1500" placeholder="欢迎反馈具体哪个字听感异常、断句或音色建议（审核通过后将在评论列表展示，邮箱严格保密）"></textarea>
+        </div>
+
+        <div class="actions" style="justify-content:space-between;">
+          <button type="button" id="switchToWallBtn" class="btn-secondary btn-sm">💭 查看评论列表</button>
+          <button type="submit" id="fbSubmitBtn" class="btn-primary">提交打分与反馈</button>
+        </div>
+        <div id="fbStatus" class="fb-msg"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================== 精选评论列表弹窗 ===================== -->
+  <div class="modal-backdrop" id="wallModal">
+    <div class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="wallModalTitle">
+      <div class="modal-head">
+        <h3 id="wallModalTitle">💭 精选听审评论列表</h3>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          <select id="wallEraFilter" style="width:auto;padding:4px 8px;font-size:0.78rem;">
+            <option value="">全部时代</option>
+            <option value="mc">中古音</option>
+            <option value="oc">上古音</option>
+            <option value="em">近古明清</option>
+            <option value="em_zyyy">中原音韵</option>
+          </select>
+          <button type="button" id="refreshWallBtn" class="btn-secondary btn-sm">刷新</button>
+          <button type="button" id="wallOpenFeedbackBtn" class="btn-accent btn-sm">💬 写评论</button>
+          <button type="button" id="wallModalClose" class="btn-secondary btn-sm">✕ 关闭</button>
+        </div>
+      </div>
+      <div id="publicWallList" class="wall-list">
+        <span style="color:var(--muted);font-size:0.84rem;">正在加载精选评论...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== 手机端下载流量确认弹窗 ===================== -->
+  <div class="modal-backdrop" id="mobileDlModal">
+    <div class="modal modal-narrow" role="dialog" aria-modal="true" aria-labelledby="mobileDlTitle">
+      <div class="modal-head">
+        <h3 id="mobileDlTitle">📱 移动网络流量提醒</h3>
+        <button type="button" id="mobileDlCloseBtn" class="btn-secondary btn-sm">✕ 关闭</button>
+      </div>
+      <div class="traffic-box">
+        <div style="font-size:0.78rem;color:var(--muted);">本次预计下载古音语音库体积</div>
+        <div id="mobileDlSizeText" class="traffic-size">约 176.8 MB</div>
+        <p class="traffic-note">
+          检测到您正在使用手机/移动设备。古音拟音全部在您本机离线运行，首次合成需下载上述语音库（下载完成后自动缓存至本机，下次打开不再消耗流量）。请注意当前移动流量消耗，建议在 Wi-Fi 环境下继续。
+        </p>
+      </div>
+      <div class="actions" style="justify-content:flex-end;margin-top:0;">
+        <button type="button" id="mobileDlCancelBtn" class="btn-secondary">取消（暂不下载）</button>
+        <button type="button" id="mobileDlConfirmBtn" class="btn-primary">继续下载并合成</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 全局悬浮术语提示浮层 & Toast -->
+  <div id="hfTooltip" class="hf-tooltip" role="tooltip" aria-hidden="true">
+    <div id="hfTtTitle" class="hf-tt-title"></div>
+    <div id="hfTtBody" class="hf-tt-body"></div>
+    <div id="hfTtFoot" class="hf-tt-foot" style="display:none;"></div>
+  </div>
+  <div id="hfToast" class="hf-toast" role="status" aria-live="polite"></div>
+
+  <script type="module">
+    const ASSET_VER = "20261119d";
+    import { SR, extractVocosMel24k } from "./hanfire_dsp.mjs?v=20261119d";
+    import {
+      saveHistoryItem,
+      listHistoryItems,
+      deleteHistoryItem,
+      clearHistoryItems,
+    } from "./model_cache.mjs?v=20261119d";
+
+    const PROFILE_KEY = "hanfire_reviewer_profile_v1";
+    const STAR_LABELS = ["", "1星 · 明显错音/破音", "2星 · 多处偏差", "3星 · 基本可懂有瑕疵", "4星 · 清晰自然", "5星 · 音准极佳"];
+    const ERA_NAMES = { oc: "上古音", mc: "中古切韻", em: "近古明清", em_zyyy: "中原音韻" };
+    const VOICE_LABELS = { male_128Hz: "沉稳男声", female_252Hz: "清朗女声", custom: "自定义人声" };
+
+    const worker = new Worker(new URL(`./hanfire_worker.mjs?v=${ASSET_VER}`, import.meta.url), { type: "module" });
+
+    // DOM refs
+    const backendBadge = document.getElementById("backendBadge");
+    const cacheBadge = document.getElementById("cacheBadge");
+    const statusText = document.getElementById("statusText");
+    const pctText = document.getElementById("pctText");
+    const barFill = document.getElementById("barFill");
+    const fallbackNote = document.getElementById("fallbackNote");
+    const synthBtn = document.getElementById("synthBtn");
+    const downloadLink = document.getElementById("downloadLink");
+    const clearCacheBtn = document.getElementById("clearCacheBtn");
+    const audioPlayer = document.getElementById("audioPlayer");
+    const waveCanvas = document.getElementById("waveCanvas");
+    const glossRibbon = document.getElementById("glossRibbon");
+    const glossCount = document.getElementById("glossCount");
+    const adjBanner = document.getElementById("adjBanner");
+    const adjSummary = document.getElementById("adjSummary");
+
+    const textInput = document.getElementById("textInput");
+    const voiceSelect = document.getElementById("voiceSelect");
+    const stepsSelect = document.getElementById("stepsSelect");
+    const speedRange = document.getElementById("speedRange");
+    const speedVal = document.getElementById("speedVal");
+    const customUploadBox = document.getElementById("customUploadBox");
+    const customAudioFile = document.getElementById("customAudioFile");
+    const customAudioInfo = document.getElementById("customAudioInfo");
+
+    // Feedback refs
+    const fbContext = document.getElementById("fbContext");
+    const identityPill = document.getElementById("identityPill");
+    const identityLabel = document.getElementById("identityLabel");
+    const editIdentityBtn = document.getElementById("editIdentityBtn");
+    const identityFields = document.getElementById("identityFields");
+    const fbNickname = document.getElementById("fbNickname");
+    const fbEmail = document.getElementById("fbEmail");
+    const starHint = document.getElementById("starHint");
+    const fbIpa = document.getElementById("fbIpa");
+    const fbComment = document.getElementById("fbComment");
+    const hpWebsite = document.getElementById("hpWebsite");
+    const fbSubmitBtn = document.getElementById("fbSubmitBtn");
+    const fbStatus = document.getElementById("fbStatus");
+    const publicWallList = document.getElementById("publicWallList");
+    const wallEraFilter = document.getElementById("wallEraFilter");
+
+    // Rhyme catalog refs
+    const rhymeCatalogContainer = document.getElementById("rhymeCatalogContainer");
+    const rhymeCountBadge = document.getElementById("rhymeCountBadge");
+    const rhymeSearch = document.getElementById("rhymeSearch");
+    const mcDetailToggle = document.getElementById("mcDetailToggle");
+    const mcDetailWrap = document.getElementById("mcDetailWrap");
+    const rhymePlayerBar = document.getElementById("rhymePlayerBar");
+    const rpTitle = document.getElementById("rpTitle");
+    const rpStatus = document.getElementById("rpStatus");
+    const rhymeAudio = document.getElementById("rhymeAudio");
+    const rhymeDownload = document.getElementById("rhymeDownload");
+    const rpRateBtn = document.getElementById("rpRateBtn");
+
+    // Tuner modal refs
+    const tunerModal = document.getElementById("tunerModal");
+    const tunerTitle = document.getElementById("tunerTitle");
+    const tunerCurrentInfo = document.getElementById("tunerCurrentInfo");
+    const tunerPolyList = document.getElementById("tunerPolyList");
+    const tunerSameInput = document.getElementById("tunerSameInput");
+    const tunerYunleiSel = document.getElementById("tunerYunleiSel");
+    const tunerToneSel = document.getElementById("tunerToneSel");
+    const tunerIpaInput = document.getElementById("tunerIpaInput");
+    const tunerPreview = document.getElementById("tunerPreview");
+    const tunerAudio = document.getElementById("tunerAudio");
+    const tunerMcYunTab = document.getElementById("tunerMcYunTab");
+
+    // State
+    let selectedEra = "mc";
+    let rhymeEra = "mc";
+    let engineReady = false;
+    let isBusy = false;
+    let melFilterbank = null;
+    let defaultPromptItems = null;
+    let customPromptObj = null;
+    let currentBlobUrl = null;
+    let rhymeBlobUrl = null;
+    let tunerBlobUrl = null;
+    let currentBuildId = "";
+    let currentGloss = [];
+    let rhymeCatalog = null;
+    let selectedStar = 0;
+    let userAdjustments = []; // [{ char, beforeIpa, beforeTokens, spec, afterIpa, afterTokens, clauseIdx }]
+    let lastSynthRecord = null; // metadata of latest synthesized audio (synth or rhyme)
+    let activeTunerItem = null;
+    let activeTunerSpec = "";
+    let activeTunerEval = null;
+    let previewReqSeq = 0;
+    let evalReqSeq = 0;
+    let previewTimer = null;
+
+    // 所有底层硬件/引擎技术信息统一输出至浏览器控制台，界面保持简洁易懂
+    console.log("[Hanfire] 浏览器运行环境检测:", {
+      crossOriginIsolated: window.crossOriginIsolated,
+      sharedArrayBuffer: typeof SharedArrayBuffer !== "undefined",
+      hardwareConcurrency: navigator.hardwareConcurrency || 1,
+      webgpuSupported: typeof navigator.gpu !== "undefined",
+      enginePlan: "Weight-Only INT8 (MatMulNBits-8 bs=32 asym, FFN DP4A + Attn FP32) · 优先 WebGPU 显卡加速，无显卡自动回落多核 WASM SIMD + IndexedDB 分片缓存",
+    });
+
+    function escapeHtml(s) {
+      return String(s ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    // ---------- 0. 音韵与拟音术语悬浮提示系统 ----------
+    const TERM_GLOSSARY = {
+      "上古音": "先秦至两汉时期（约公元前11世纪—公元2世纪）的汉语语音，以《诗经》押韵与汉字谐声系列为主要依据，保留丰富的鼻尾、入声塞尾与清鼻流音。",
+      "中古音": "南北朝至隋唐宋时期的汉语标准读书音，以《切韻》《廣韻》音系为核心，最适合还原唐诗宋词的严密平仄与押韵。",
+      "近古音": "元明清时期的汉语官话语音，上承中古音、下启现代汉语，保留尖团音区分与早期官话读书韵味。",
+      "近古北音": "以元代大都（今北京一带）语音为基础的北方戏曲与官话音系，是现代普通话的直接前身。",
+      "汉火体系": "面向有声拟音设计的上古汉语构拟方案：以王力上古 30 韵部与传统音韵规律为骨，单核四槽严格一字一音，兼顾古朴听感与《诗经》押韵。",
+      "王力体系": "著名语言学家王力先生提出的上古汉语 30 韵部体系，清晰划分阴声、阳声与入声三类韵部，是《诗经》古韵研究的经典框架。",
+      "切韻": "隋代陆法言于公元 601 年编纂的韵书，确立了中古汉语语音的标准格局，是后世研究唐诗读音的根本依据。",
+      "廣韻": "北宋陈彭年等奉敕增修《切韻》而成的官修韵书（全称《大宋重修广韵》），收录两万六千余字，完整保存了中古声母、韵母与四声分类。",
+      "明清五声雅音": "明代及清初通行于士大夫与科举读书的官话正音（以南京官话为底），保留阴平、阳平、上声、去声、入声「五声」及尖团、疑微母对立。",
+      "中原音韻": "元代周德清为北曲作词编纂的韵书（1324 年），将韵母归纳为十九个韵部，并首次系统记录了北方话「入派三声」的演变。",
+      "IPA": "国际音标（International Phonetic Alphabet），国际通用的标音符号系统，每个符号精确对应一种口腔发音动作，用于精准记录历史拟音。",
+      "清鼻流音": "上古汉语特有的清化鼻音与边音（如 m̥、n̥、ŋ̊、l̥），发音时声带不振动、先带一股轻气再过渡到鼻音/边音（如「黑/海/忽」类古音）。",
+      "-p -t -k -m": "古汉语特有的收尾辅音：-m 为双唇闭口鼻尾（如「心/南」收口闭唇）；-p/-t/-k 为短促唯闭入声塞尾（双唇、舌尖、舌根截断气流）。",
+      "三十八母": "中古汉语的 38 个声母类别（如帮滂並明、见溪羣疑、精清從心邪、影云以等），严格区分全清、次清、全浊与次浊。",
+      "韵部": "押韵时可以互通的一组韵母集合。例如上古《诗经》分为 30 韵部，元代《中原音韻》分为 19 韵部。",
+      "韵类": "中古音按「韵目 + 开合口 + 等第 + 舒入」细分出的 245 个最小韵母单元，用来精确区分同一韵部内部的细微开口度与介音差异。",
+      "小韵": "《廣韻》中读音（声母、韵母、声调）完全相同的一组同音字称为一个小韵；展开后可逐类试听中古全部 245 个细化韵类。",
+      "十六攝": "宋代等韵学家将中古两百余韵归并成的 16 大韵系（通、江、止、遇、蟹、臻、山、效、果、假、宕、梗、曾、流、深、咸），同一摄主元音与韵尾相近。",
+      "30部": "王力先生归纳的上古汉语 30 个韵部（如之、幽、宵、侯、鱼、阳、耕、真、元、侵、谈等），完整对应《诗经》的押韵体系。",
+      "十九韵部": "《中原音韻》归纳的 19 个北曲押韵大部（东钟、江阳、支思、齐微、鱼模、皆来、真文、寒山、桓欢、先天、萧豪、歌戈、家麻、车遮、庚青、尤侯、侵寻、监咸、廉纤）。",
+      "四声八调": "中古「平、上、去、入」四个声调，因声母清浊不同各分化为「阴调（清声母）」与「阳调（浊声母）」，合称四声八调。",
+      "五声": "明清南京系官话保留的五个声调：阴平、阳平、上声、去声，外加一个短促收束的独立入声（与现代普通话的四声不同）。",
+      "入派三声": "元代北方话中，原本短促的中古入声塞尾（-p/-t/-k）脱落，入声字按声母清浊分别归入平声、上声、去声之中，即现代普通话无入声的由来。",
+      "尖音": "声母为舌尖前音（z/c/s，即精组）拼细音 i/ü 的读音，例如明清官话里「清、秋、千、酒、仙、雪」读尖音。",
+      "团音": "声母为舌根音或舌面音（g/k/h 或 j/q/x，即见晓组）拼细音 i/ü 的读音，例如「轻、江、经、举」读团音。",
+      "尖团分明": "明确区分尖音（如「清 tsʰiŋ」「酒 tsiu」）与团音（如「轻 tɕʰiŋ」「九 tɕiu」），这是明清雅音、昆曲与京剧韵白的重要特征。",
+      "尖团对立": "同「尖团分明」：精组细音（尖音，如「清/酒/千」）与见组细音（团音，如「轻/九/牵」）发音不同、互不混淆。",
+      "疑母": "古汉语舌根鼻音声母 [ŋ-]（类似普通话后鼻音 ng 放在字头），如「疑、月、牛、我、颜」在古音中均带鼻音字头。",
+      "微母": "古汉语唇齿半元音声母 [ʋ-]（上齿轻触下唇、类似柔和的 v），如明清雅音中的「文、武、万、物、微、无」。",
+      "影母": "中古喉塞音声母 [ʔ-]（声门轻闭后发元音）。按开合口与等第不同，洪音开口读纯零声母（安/翁），合口带短 w（乌/温），细音带短 y（衣/烟）。",
+      "云母": "中古匣母三等字演变而来的声母（如「雨、云、王、为、远」），盛中唐已脱去喉擦音，按开合口分别带有轻柔的 w 或 y 滑音。",
+      "崇母": "中古全浊卷舌塞擦音声母（如「士、仕、事、床」）。至盛中唐时期，崇母止摄仄声（士/仕/事）逐步擦化并发生浊上变去，听感更柔和连贯。",
+      "精组": "中古舌尖前音声母组（精 ts、清 tsʰ、從 dz、心 s、邪 z），如「酒、清、前、须、徐、雪」。",
+      "见组": "中古舌根音声母组（见 k、溪 kʰ、羣 g、疑 ŋ），如「居、举、去、俱、光、江」。",
+      "短入声": "带有紧促喉塞或唯闭收尾、时长明显短于平上去三声的声调。明清官话仍完整保留短入声（如「一、白、雪、月、落」）。",
+      "一字一音": "每个汉字严格压缩为单个音节一拍读出，绝不因学术拟音拼写较长而把一个字裂成两三拍（避免「举→ji+ü」「安→安安」）。",
+      "单核4槽": "将每个汉字锁定为「声母 | 介音 | 唯一主元音（韵腹）| 韵尾」四个固定槽位，保证古音特征完整且格律工整。",
+      "声母": "一个汉字音节开头的辅音部分（如「光」的 g-、「霜」的 sh-）。没有辅音开头则称「零声母」。",
+      "介音": "位于声母与主元音之间的短滑音（韵头），包括齐齿 -i-（j）、合口 -u-（w）、撮口 -ü-（ɥ）。",
+      "韵腹": "音节中最响亮、承托押韵的核心主元音。两字是否押韵，首要取决于韵腹与韵尾是否一致。",
+      "韵尾": "音节结尾的收音成分，包括元音尾（-i/-u）、鼻音尾（-m/-n/-ŋ）以及入声塞尾（-p/-t/-k）。",
+      "零声母": "不带前置辅音、直接以元音起音的汉字（如开口的「安、哀、翁、爱」）。",
+      "四呼": "汉语音韵按介音与唇形将韵母分为四类：开口呼（无介音）、齐齿呼（i 介音）、合口呼（u 介音）、撮口呼（ü 介音）。",
+      "开口": "发音时不圆唇、无 u/ü 介音的呼类（如「寒、安、歌、山」）。",
+      "合口": "发音时双唇收圆、带有 u 介音或圆唇主元音的呼类（如「光、霜、官、乌、王」）。",
+      "齐齿": "带有舌面前高不圆唇介音 -i-（[j]）的细音韵母（如「衣、天、千、斜」）。",
+      "撮口": "带有双唇撮圆前高介音 -ü-（[y/ɥ]）的细音韵母（如「鱼、举、须、雪、绝」）。",
+      "洪音": "不含 -i-/-ü- 细音介音的开口与合口韵母（中古一、二等字多属洪音），听感浑厚开阔（如「安、翁、光、豪」）。",
+      "细音": "含有 -i- 或 -ü- 介音（齐齿、撮口）的韵母（中古三、四等字多属细音），听感清细靠前（如「衣、千、雪、笠」）。",
+      "一等": "中古等韵的四个等级之一：无细音介音、主元音偏后且浑厚（如「东、寒、豪、唐、歌」）。",
+      "二等": "中古等韵之一：无细音介音、主元音偏前偏低，在明清官话中尚未颚化（如「山、间、颜、家、江」）。",
+      "三等": "中古等韵之一：带有 -i- 或 -ü- 细音介音，字数最多、韵类最丰富（如「阳、仙、支、脂、鱼、虞」）。",
+      "四等": "中古等韵之一：带有紧前纯细音 -i- 介音与较高主元音（如「先、齐、青、萧」）。",
+      "重纽": "中古三等韵中，唇音和牙喉音在同韵同调下分化出「A 类（更靠前清细）」与「B 类（略偏央后）」两套对立读音。",
+      "双唇闭口韵": "以双唇鼻音 -m 或双唇入声 -p 收尾的韵母（中古深摄、咸摄，如「心、林、南、盐、笠、立」），收音时双唇自然闭合。",
+      "闭口韵": "同「双唇闭口韵」：以 -m 或 -p 收尾，收尾时上下嘴唇合拢。",
+      "唯闭塞尾": "汉语入声韵尾 -p/-t/-k 的发音方式：只将嘴唇/舌尖/舌根合拢截断气流，不向外爆破弹气（因此不会发出多余的“普/特/克”尾音）。",
+      "唯闭不除阻": "同「唯闭塞尾」：发音器官闭塞停顿即结束，保留短促紧收的入声质感，避免爆破杂音。",
+      "舒声": "平、上、去三声的统称。发音时气流可顺畅延续、音节较长，与短促的「入声」相对。",
+      "入声": "古汉语四声之一，以 -p/-t/-k 唯闭塞尾或短喉塞收束，发声短促有力（如《江雪》韵脚「絕、滅、雪」）。",
+      "舒长入短": "古诗朗读的核心节奏原则：舒声韵脚可自然拉长舒展，入声韵脚则严格收短，绝不把短入声拖成长音。",
+      "阴阳入对转": "上古汉语同一韵系内部「无尾阴声韵、鼻尾阳声韵（-m/-n/-ŋ）、塞尾入声韵（-p/-t/-k）」主元音相近、常在构词或押韵中相通的规律。",
+      "魚韵": "中古遇摄三等韵之一（如「鱼、居、举、去、须、书」），汉火中古音读纯撮口前圆唇韵味，与虞韵清晰分流。",
+      "虞韵": "中古遇摄三等韵之一（如「虞、俱、拘、驱、雨、无」），见组虞韵保持圆唇 [u] 质感，不与魚韵混淆。",
+      "鱼/虞分流": "唐诗中「魚韵」与「虞韵」原则上分用不混押（如「举/去」属魚韵撮口，「俱/拘」属虞韵圆唇），本引擎严格区分二者。",
+      "未颚化": "古汉语二等见系字（如「间、颜、家、江」）声母保持舌根音 g/k/h 而不变为普通话的 j/q/x（如「间」读 gan 而不读 jian）。",
+      "全清": "不送气、声带不振动的清辅音声母（如 b/d/g/z/j），在中古衍生出高亢清晰的「阴调」。",
+      "次清": "送气、声带不振动的清辅音声母（如 p/t/k/c/q），同样归入「阴调」。",
+      "全浊": "声带振动的浊塞音、浊塞擦音与浊擦音（如中古並、定、羣、從、崇母），在中古衍生出低沉浑厚的「阳调」。",
+      "次浊": "声带振动的鼻音、边音与半元音（如明 m、泥 n、来 l、疑 ŋ、日 ɲ、云、以母）。",
+      "浊上变去": "中古中后期的重要音变规律：全浊声母的上声字（如「士、仕、是、道、动、近」）逐渐演变为去声读音。",
+      "擦化": "原本带塞音成阻的塞擦音（如崇母 dz/dʐ）在历史演变中弱化为纯擦音（如 ʑ/ʂ），使字音连接更平顺自然。",
+      "通攝": "中古十六摄之一，包含東、冬、鍾（及入声屋、沃、燭）韵，主元音为圆唇后元音 u/o 配 -ŋ/-k 尾（如东、风、同、独）。",
+      "江攝": "中古十六摄之一，含江韵与入声覺韵，二等深圆开口配 -ŋ/-k 尾（如江、窗、觉、岳）。",
+      "止攝": "中古十六摄之一，含支、脂、之、微四韵，全为三等细音阴声韵，主元音多为 i/ɨ/ui（如枝、师、思、归、水）。",
+      "遇攝": "中古十六摄之一，含魚、虞、模三韵，圆唇阴声韵（如鱼、举、虞、俱、孤、都）。",
+      "蟹攝": "中古十六摄之一，含齊、佳、皆、灰、咍、祭、泰、夬、廢等韵，以 -i 收尾的阴声韵（如齐、来、回、海、世）。",
+      "臻攝": "中古十六摄之一，含眞、諄、文、欣、魂、痕及对应入声，以舌尖 -n/-t 收尾（如真、春、云、门、日、一）。",
+      "山攝": "中古十六摄之一，含寒、桓、山、刪、先、仙、元及对应入声，低中元音配 -n/-t 尾（如寒、山、仙、雪、绝、月）。",
+      "效攝": "中古十六摄之一，含蕭、宵、肴、豪四韵，以圆唇 -u 收尾的阴声韵（如晓、鸟、高、豪、刀）。",
+      "果攝": "中古十六摄之一，含歌、戈两韵，一等为主的后低元音 ɑ/uɑ（如歌、多、河、波、蓑）。",
+      "假攝": "中古十六摄之一，含麻韵二等与三等（如家、花、茶、斜、夜、谢）。",
+      "宕攝": "中古十六摄之一，含唐、陽及入声鐸、藥，洪亮低元音配 -ŋ/-k 尾（如光、霜、乡、落、略）。",
+      "梗攝": "中古十六摄之一，含庚、耕、清、青及入声陌、麦、昔、錫，偏前元音配 -ŋ/-k 尾（如明、清、青、白、客）。",
+      "曾攝": "中古十六摄之一，含登、蒸及入声德、職，央元音配 -ŋ/-k 尾（如登、能、冰、兴、德、极）。",
+      "流攝": "中古十六摄之一，含尤、侯、幽三韵，主元音偏高后配 -u 尾（如流、秋、楼、头、幽）。",
+      "深攝": "中古十六摄之一，含侵韵与入声緝韵，细音双唇闭口 -m/-p 尾（如林、心、深、立、笠）。",
+      "咸攝": "中古十六摄之一，含覃、談、鹽、添、咸、銜、嚴、凡及对应入声，低中元音双唇闭口 -m/-p 尾（如南、谈、盐、叶、合）。",
+      "四聲八調": "展示中古平、上、去、入四声在清声母（阴调）与浊声母（阳调）下的完整八调对立。",
+      "之職蒸對轉": "上古央元音 *ə 韵系：阴声之部（无尾）、入声職部（-k 尾）、阳声蒸部（-ŋ 尾）三部阴阳入对转。",
+      "侯屋東對轉": "上古后高圆唇 *o/*u 韵系：阴声侯部、入声屋部（-k 尾）、阳声東部（-ŋ 尾）三部对转。",
+      "侵緝對轉": "上古央高闭口韵系：阳声侵部（-m 尾）与入声緝部（-p 尾）双唇闭口对转。",
+      "談盍對轉": "上古低元音闭口韵系：阳声談部（-m 尾）与入声盍部（-p 尾）双唇闭口对转。",
+      "魚鐸陽對轉": "上古低后元音 *a 韵系：阴声魚部、入声鐸部（-k 尾）、阳声陽部（-ŋ 尾）三部对转，为《诗经》大韵系。",
+      "支錫耕對轉": "上古前元音 *e 韵系：阴声支部、入声錫部（-k 尾）、阳声耕部（-ŋ 尾）三部对转。",
+      "脂質真對轉": "上古前高元音 *i 韵系：阴声脂部、入声質部（-t 尾）、阳声真部（-n 尾）三部对转。",
+      "微物文對轉": "上古央元音舌尖韵系：阴声微部、入声物部（-t 尾）、阳声文部（-n 尾）三部对转。",
+      "歌月元對轉": "上古低元音舌尖韵系：阴声歌部、入声月部（-t 尾）、阳声元部（-n/-r 尾）三部对转。",
+      "宵藥對轉": "上古圆唇低元音 *au 韵系：阴声宵部与入声藥部（-k 尾）对转。",
+      "幽覺冬對轉": "上古圆唇央元音 *u/*əu 韵系：阴声幽部、入声覺部（-k 尾）与阳声冬部（-ŋ 尾）三部对转。",
+      "四聲源流": "展示上古无声调尾音（平舒、-ʔ 上声、-s/-h 去声、-p/-t/-k 入声）如何演变为后世四声。",
+      "陰聲韻": "不带鼻音或塞音韵尾、以元音自然收尾的韵母大类（如歌、鱼、齐、豪、尤等）。",
+      "陽聲韻": "以鼻音（-n 或 -ŋ）收尾的韵母大类（如东钟、江阳、真文、寒山、先天、庚青等）。",
+      "閉口韻": "以双唇鼻音 -m 收尾的韵母大类（如侵寻、监咸、廉纤），收音时上下唇闭合。",
+      "入聲與五聲": "展示明清官话在阴平、阳平、上声、去声之外保留独立短入声的「五声」格局。",
+    };
+
+    const MC_INITIAL_DESC = {
+      "幫": "全清双唇音 p", "滂": "次清双唇音 pʰ", "並": "全浊双唇音 b", "明": "双唇鼻音 m",
+      "端": "全清舌尖音 t", "透": "次清舌尖音 tʰ", "定": "全浊舌尖音 d", "泥": "舌尖鼻音 n", "來": "舌尖边音 l",
+      "知": "全清舌上音 ʈ", "徹": "次清舌上音 ʈʰ", "澄": "全浊舌上音 ɖ", "娘": "舌上鼻音 ɳ",
+      "精": "全清舌尖前音 ts", "清": "次清舌尖前音 tsʰ", "從": "全浊舌尖前音 dz", "心": "清擦音 s", "邪": "全浊擦音 z",
+      "莊": "全清卷舌音 tʂ", "初": "次清卷舌音 tʂʰ", "崇": "全浊卷舌音 dʐ（盛中唐渐擦化）", "牀": "全浊卷舌音 dʐ（崇母）", "生": "卷舌清擦音 ʂ", "俟": "卷舌浊擦音 ʐ",
+      "章": "全清舌面音 tɕ", "昌": "次清舌面音 tɕʰ", "常": "全浊舌面擦音 ʑ", "書": "舌面清擦音 ɕ", "船": "全浊舌面音 dʑ", "日": "舌面鼻音 ɲ",
+      "見": "全清舌根音 k", "溪": "次清舌根音 kʰ", "羣": "全浊舌根音 g", "疑": "舌根鼻音 ŋ",
+      "曉": "清喉擦音 x/h", "匣": "全浊喉擦音 ɣ", "影": "喉塞音 ʔ（开口按零声母读）", "云": "三等脱擦滑音（按呼读 w/y）", "以": "细音零声母滑音 j",
+    };
+
+    const IPA_SYMBOL_NOTES = [
+      ["tɕʰ", "tɕʰ：送气舌面塞擦音（似普通话 q）"],
+      ["tɕ", "tɕ：不送气舌面塞擦音（似普通话 j）"],
+      ["dʑ", "dʑ：全浊舌面塞擦音（声带振动的 j）"],
+      ["tʂʰ", "tʂʰ：送气卷舌塞擦音（似普通话 ch）"],
+      ["tʂ", "tʂ：不送气卷舌塞擦音（似普通话 zh）"],
+      ["tsʰ", "tsʰ：送气舌尖前音（似普通话 c）"],
+      ["ts", "ts：不送气舌尖前音（似普通话 z）"],
+      ["dz", "dz：全浊舌尖前音（声带振动的 z）"],
+      ["pʰ", "pʰ：送气双唇塞音（似 p）"],
+      ["tʰ", "tʰ：送气舌尖塞音（似 t）"],
+      ["kʰ", "kʰ：送气舌根塞音（似 k）"],
+      ["ŋ̊", "ŋ̊：上古清化舌根鼻音"],
+      ["m̥", "m̥：上古清化双唇鼻音"],
+      ["n̥", "n̥：上古清化舌尖鼻音"],
+      ["l̥", "l̥：上古清化边音"],
+      ["ŋ", "ŋ：舌根鼻音（类似后鼻音 ng）"],
+      ["ɲ", "ɲ：舌面鼻音（类似轻柔的 ni- 鼻音）"],
+      ["ʋ", "ʋ：唇齿半元音（微母，轻柔的 v）"],
+      ["ʔ", "ʔ：喉塞音（声门轻闭起音，作尾标时表上声）"],
+      ["ɕ", "ɕ：舌面清擦音（似普通话 x）"],
+      ["ʑ", "ʑ：舌面全浊擦音（声带振动的 x）"],
+      ["ʂ", "ʂ：卷舌清擦音（似普通话 sh）"],
+      ["ʐ", "ʐ：卷舌浊擦音（似普通话 r）"],
+      ["ɣ", "ɣ：全浊喉擦音（声带振动的 h）"],
+      ["ɦ", "ɦ：浊喉擦音（气息柔和的浊 h）"],
+      ["ɥ", "ɥ：撮口介音（似快速滑过的 ü）"],
+      ["j", "j：齐齿细音介音（似快速滑过的 i）"],
+      ["w", "w：合口圆唇介音（似快速滑过的 u）"],
+      ["ɨ", "ɨ：央高不圆唇元音（介于 i 与 e 之间）"],
+      ["ʉ", "ʉ：央高圆唇元音（介于 ü 与 u 之间）"],
+      ["ɯ", "ɯ：后高不圆唇元音（不圆唇的 u）"],
+      ["ɛ", "ɛ：前中低元音（似“耶”的韵腹 e）"],
+      ["ɜ", "ɜ：央中低元音（自然放松的 ə/e）"],
+      ["ɔ", "ɔ：后中低圆唇元音（开口较大的 o）"],
+      ["ɒ", "ɒ：后低圆唇元音（偏深的圆唇 a/o）"],
+      ["ɑ", "ɑ：后低不圆唇元音（洪亮的“啊”）"],
+      ["ə", "ə：央元音（自然放松的“鹅”）"],
+    ];
+
+    function explainIpaSymbols(ipaStr) {
+      if (!ipaStr) return [];
+      const notes = [];
+      let work = String(ipaStr);
+      // 先看韵尾（去掉末尾调号与五度符号）
+      const bare = work.replace(/[0-9˩˨˧˦˥ʰʷʔh]+$/g, "");
+      if (bare.endsWith("m")) notes.push("-m 尾：双唇闭口鼻尾（收音合唇）");
+      else if (bare.endsWith("p")) notes.push("-p 尾：双唇唯闭入声（合唇短促截气）");
+      else if (bare.endsWith("t")) notes.push("-t 尾：舌尖唯闭入声（抵齿龈短促截气）");
+      else if (bare.endsWith("k")) notes.push("-k 尾：舌根唯闭入声（抵软腭短促截气）");
+      else if (bare.endsWith("ŋ")) notes.push("-ŋ 尾：后鼻音韵尾（ng）");
+      else if (bare.endsWith("n")) notes.push("-n 尾：前鼻音韵尾");
+
+      for (const [sym, desc] of IPA_SYMBOL_NOTES) {
+        if (work.includes(sym)) {
+          notes.push(desc);
+          work = work.split(sym).join(" ");
+          if (notes.length >= 4) break;
+        }
+      }
+      if (/[˩˨˧˦˥]/.test(ipaStr)) {
+        notes.push("˩˨˧˦˥：五度调值标号（由低 1 到高 5 表示声调起伏）");
+      }
+      return notes;
+    }
+
+    function decodeMcCategory(str) {
+      if (!str) return "";
+      const parts = [];
+      const mIni = str.match(/^([幫滂並明端透定泥來知徹澄娘精清從心邪莊初崇牀生俟章昌常書船日見溪羣疑曉匣影云以])/);
+      if (mIni) parts.push(`${mIni[1]}母（${MC_INITIAL_DESC[mIni[1]]}）`);
+      if (str.includes("開")) parts.push("开口呼");
+      else if (str.includes("合")) parts.push("合口呼");
+      const mDeng = str.match(/([一二三四])([AB])?/);
+      if (mDeng) parts.push(`${mDeng[1]}等${mDeng[2] ? "重纽" + mDeng[2] + "类" : ""}`);
+      if (str.includes("舒")) parts.push("舒声");
+      else if (str.includes("入")) parts.push("入声（短促）");
+      const mTone = str.match(/(平陰|平陽|上陰|上陽|去陰|去陽|入陰|入陽|[平上去入])/);
+      if (mTone) {
+        const toneMap = {
+          "平陰": "阴平", "平陽": "阳平", "上陰": "阴上", "上陽": "阳上",
+          "去陰": "阴去", "去陽": "阳去", "入陰": "阴入", "入陽": "阳入",
+          "平": "平声", "上": "上声", "去": "去声", "入": "入声",
+        };
+        parts.push(toneMap[mTone[1]] || mTone[1]);
+      }
+      return parts.join(" · ");
+    }
+
+    function formatGlossSublabel(item, era) {
+      const toks = (item.tokens || "").split(/\s+/).filter(Boolean);
+      if (era === "mc") {
+        let ini = "", yun = "", tone = "";
+        for (const t of toks) {
+          if (t.startsWith("Q_") && !t.includes("_舒_") && !t.includes("_入_")) {
+            ini = t.slice(2) + "母";
+          } else if (t.startsWith("Q_") && (t.includes("_舒_") || t.includes("_入_"))) {
+            const segs = t.slice(2).split("_");
+            yun = segs[0] || "";
+            tone = segs[2] || segs[1] || "";
+          }
+        }
+        if (ini || yun) {
+          return [ini, yun, tone].filter(Boolean).join("·");
+        }
+      }
+      // 通用白话短标签（不暴露 b0/OC_/EM_ 等底层代码）
+      const ipa = String(item.ipa || "");
+      const bare = ipa.replace(/[0-9˩˨˧˦˥ʰʷʔhs]+$/g, "");
+      if (bare.endsWith("p") || bare.endsWith("t") || bare.endsWith("k")) return `入声 -${bare.slice(-1)}`;
+      if (bare.endsWith("m")) return "闭口 -m";
+      if (ipa.includes("ʋ")) return "微母";
+      if (ipa.startsWith("ŋ")) return "疑母";
+      if (/[m̥n̥l̥ŋ̊]/.test(ipa)) return "清鼻流音";
+      if (ipa.endsWith("h") || ipa.endsWith("4") || ipa.endsWith("s")) return "去声";
+      if (ipa.endsWith("ʔ") || ipa.endsWith("3")) return "上声";
+      if (ipa.endsWith("2")) return "阳平";
+      if (ipa.endsWith("1")) return "阴平";
+      return ERA_NAMES[era] || "拟音";
+    }
+
+    function buildCharTooltip(item, era) {
+      const lines = [];
+      const toks = (item.tokens || "").split(/\s+/).filter(Boolean);
+      if (era === "mc") {
+        const descParts = [];
+        for (const t of toks) {
+          if (t.startsWith("Q_") && !t.includes("_舒_") && !t.includes("_入_")) {
+            const m = t.slice(2);
+            descParts.push(MC_INITIAL_DESC[m] ? `${m}母（${MC_INITIAL_DESC[m]}）` : `${m}母`);
+          } else if (t.startsWith("Q_") && (t.includes("_舒_") || t.includes("_入_"))) {
+            const segs = t.slice(2).split("_");
+            const rBase = segs[0] || "";
+            const dStr = decodeMcCategory(segs.join(""));
+            descParts.push(`${rBase}韵系 · ${dStr}`);
+          }
+        }
+        if (descParts.length > 0) lines.push(`切韵音韵：${descParts.join(" + ")}`);
+      }
+      const ipaNotes = explainIpaSymbols(item.ipa);
+      if (ipaNotes.length > 0) {
+        lines.push("拟音拆解：\n• " + ipaNotes.join("\n• "));
+      } else {
+        lines.push(`当前按${ERA_NAMES[era] || "历史"}音系拼读 /${item.ipa}/`);
+      }
+      if (item.isCustom && item.spec) {
+        lines.push(`已手动调音：[${item.char}=${item.spec}]`);
+      }
+      return {
+        title: `「${item.char}」 /${item.ipa}/`,
+        body: lines.join("\n"),
+        foot: "点击此卡片可试听并实时调整该字读音",
+      };
+    }
+
+    function buildRhymeCardTooltip(it, era) {
+      const lines = [];
+      if (it.note) lines.push(`韵类说明：${it.note}`);
+      const hits = [];
+      for (const kw of ["一等", "二等", "三等", "四等", "开口", "合口", "洪音", "细音", "闭口", "入声", "舒声", "重纽", "尖音", "团音", "全浊"]) {
+        if ((it.note || "").includes(kw) || (it.name || "").includes(kw)) {
+          const g = TERM_GLOSSARY[kw] || TERM_GLOSSARY[kw + "韵"];
+          if (g) hits.push(`${kw}：${g}`);
+        }
+        if (hits.length >= 2) break;
+      }
+      const ipaNotes = explainIpaSymbols(it.ipa);
+      if (ipaNotes.length > 0) lines.push("音标提示：\n• " + ipaNotes.slice(0, 3).join("\n• "));
+      if (hits.length > 0) lines.push(hits.join("\n"));
+      return {
+        title: `${it.group} · ${it.name}（/${it.ipa}/）`,
+        body: lines.join("\n"),
+        foot: "点击「听本韵」可立即合成试听例字",
+      };
+    }
+
+    // 浮层控制器（桌面悬浮 + 键盘焦点 + 视口防溢出自动定位）
+    const hfTooltip = document.getElementById("hfTooltip");
+    const hfTtTitle = document.getElementById("hfTtTitle");
+    const hfTtBody = document.getElementById("hfTtBody");
+    const hfTtFoot = document.getElementById("hfTtFoot");
+    let activeTipAnchor = null;
+
+    function positionTooltip(el) {
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const pad = 12;
+      const tw = hfTooltip.offsetWidth || 280;
+      const th = hfTooltip.offsetHeight || 90;
+      let left = r.left + r.width / 2 - tw / 2;
+      left = Math.max(pad, Math.min(window.innerWidth - tw - pad, left));
+      let top = r.top - th - 10;
+      if (top < pad) top = r.bottom + 10;
+      if (top + th > window.innerHeight - pad) top = Math.max(pad, window.innerHeight - th - pad);
+      hfTooltip.style.left = `${Math.round(left)}px`;
+      hfTooltip.style.top = `${Math.round(top)}px`;
+    }
+
+    function showTooltipFor(el) {
+      if (!el) return;
+      let title = "", body = "", foot = "";
+      if (el.dataset.term) {
+        const key = el.dataset.term;
+        title = key;
+        body = TERM_GLOSSARY[key] || `${key}：历史汉语音韵学术语。`;
+      } else if (el.dataset.tipBody) {
+        title = el.dataset.tipTitle || "";
+        body = el.dataset.tipBody || "";
+        foot = el.dataset.tipFoot || "";
+      } else {
+        return;
+      }
+      hfTtTitle.textContent = title;
+      hfTtTitle.style.display = title ? "block" : "none";
+      hfTtBody.textContent = body;
+      hfTtFoot.textContent = foot;
+      hfTtFoot.style.display = foot ? "block" : "none";
+      hfTooltip.setAttribute("aria-hidden", "false");
+      hfTooltip.classList.add("show");
+      activeTipAnchor = el;
+      positionTooltip(el);
+    }
+
+    function hideTooltip() {
+      hfTooltip.classList.remove("show");
+      hfTooltip.setAttribute("aria-hidden", "true");
+      activeTipAnchor = null;
+    }
+
+    document.addEventListener("mouseover", (ev) => {
+      const el = ev.target?.closest?.("[data-term], [data-tip-body]");
+      if (el) {
+        if (el !== activeTipAnchor) showTooltipFor(el);
+      } else if (activeTipAnchor) {
+        hideTooltip();
+      }
+    });
+    document.addEventListener("mouseout", (ev) => {
+      if (!activeTipAnchor) return;
+      const toEl = ev.relatedTarget?.closest?.("[data-term], [data-tip-body]");
+      if (!toEl) hideTooltip();
+    });
+    document.addEventListener("click", (ev) => {
+      const termEl = ev.target?.closest?.(".term[data-term]");
+      if (termEl && !termEl.closest("button")) {
+        showTooltipFor(termEl);
+      } else if (activeTipAnchor && !ev.target?.closest?.("[data-term], [data-tip-body]")) {
+        hideTooltip();
+      }
+    });
+    window.addEventListener("scroll", () => { if (activeTipAnchor) positionTooltip(activeTipAnchor); }, true);
+    document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") hideTooltip(); });
+
+    // ---------- 1. 本地永久身份 (localStorage) ----------
+    function loadProfile() {
+      try {
+        const raw = localStorage.getItem(PROFILE_KEY);
+        if (!raw) return null;
+        const obj = JSON.parse(raw);
+        if (obj && obj.nickname) return obj;
+      } catch (_) {}
+      return null;
+    }
+
+    function applyProfileUI(forceEdit = false) {
+      const prof = loadProfile();
+      if (prof && prof.nickname && !forceEdit) {
+        fbNickname.value = prof.nickname;
+        fbEmail.value = prof.email || "";
+        identityFields.classList.add("hidden");
+        identityPill.classList.add("show");
+        identityLabel.textContent = `听审身份：${prof.nickname}${prof.email ? " (" + prof.email + ")" : ""}`;
+      } else {
+        if (prof) {
+          fbNickname.value = prof.nickname || "";
+          fbEmail.value = prof.email || "";
+        }
+        identityFields.classList.remove("hidden");
+        identityPill.classList.remove("show");
+      }
+    }
+
+    editIdentityBtn.addEventListener("click", () => {
+      applyProfileUI(true);
+      fbNickname.focus();
+    });
+    applyProfileUI(false);
+
+    // ---------- 2. 顶部主视图切换 ----------
+    function switchMainView(viewName) {
+      hideTooltip();
+      document.querySelectorAll(".nav-tab").forEach((b) => b.classList.toggle("active", b.dataset.view === viewName));
+      document.querySelectorAll(".view-panel").forEach((p) => p.classList.toggle("active", p.id === `view-${viewName}`));
+      if (viewName === "rhymes") {
+        ensureRhymeCatalogLoaded().then(() => { if (rhymeCatalog) renderRhymeCatalog(); });
+      }
+    }
+    document.querySelectorAll(".nav-tab").forEach((btn) => {
+      btn.addEventListener("click", () => switchMainView(btn.dataset.view));
+    });
+
+    // ---------- 2.5. 墨观传统色主题切换 & Toast 轻提示 ----------
+    const THEME_KEY = "hanfire_inkstone_theme_v1";
+    const VALID_THEMES = ["xuanzhi", "xuanmo", "qingci", "canghai"];
+    const THEME_NAMES = { xuanzhi: "宣纸", xuanmo: "玄墨", qingci: "青瓷", canghai: "沧海" };
+    const THEME_BG = { xuanzhi: "#f7f4ed", xuanmo: "#14131a", qingci: "#e8f0ec", canghai: "#0d1822" };
+    const metaThemeColor = document.getElementById("metaThemeColor");
+    let lastWaveSamples = null;
+    const hfToastEl = document.getElementById("hfToast");
+    let toastTimer = null;
+
+    function showToast(msg, durationMs = 2400) {
+      if (!hfToastEl) return;
+      hfToastEl.textContent = msg;
+      hfToastEl.classList.add("show");
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => hfToastEl.classList.remove("show"), durationMs);
+    }
+
+    function applyTheme(theme, silent = false) {
+      const t = VALID_THEMES.includes(theme) ? theme : "xuanzhi";
+      document.documentElement.setAttribute("data-theme", t);
+      if (metaThemeColor) metaThemeColor.setAttribute("content", THEME_BG[t] || "#f7f4ed");
+      document.querySelectorAll(".theme-btn").forEach((b) => b.classList.toggle("active", b.dataset.themeSet === t));
+      try { localStorage.setItem(THEME_KEY, t); } catch (_) {}
+      if (!silent) {
+        if (typeof drawWaveform === "function") drawWaveform(lastWaveSamples);
+        if (typeof drawCompareCanvas === "function") {
+          try { drawCompareCanvas(); } catch (_) {}
+        }
+        showToast(`🎨 已切换至传统色「${THEME_NAMES[t]}」`);
+      }
+    }
+    document.querySelectorAll(".theme-btn").forEach((btn) => {
+      btn.addEventListener("click", () => applyTheme(btn.dataset.themeSet));
+    });
+    applyTheme(localStorage.getItem(THEME_KEY) || "xuanzhi", true);
+
+    // ---------- 2.6. 通用弹窗控制（评论 / 评论墙 / 手机流量提示） ----------
+    const feedbackModal = document.getElementById("feedbackModal");
+    const wallModal = document.getElementById("wallModal");
+    const mobileDlModal = document.getElementById("mobileDlModal");
+    const openFeedbackModalBtn = document.getElementById("openFeedbackModalBtn");
+    const openWallModalBtn = document.getElementById("openWallModalBtn");
+    const gpuPromptBar = document.getElementById("gpuPromptBar");
+    const gpuPromptText = document.getElementById("gpuPromptText");
+    const switchToGpuBtn = document.getElementById("switchToGpuBtn");
+    const dismissGpuPromptBtn = document.getElementById("dismissGpuPromptBtn");
+
+    function openFeedbackModal() {
+      hideTooltip();
+      updateFeedbackContextBanner();
+      feedbackModal.classList.add("show");
+    }
+    function closeFeedbackModal() { feedbackModal.classList.remove("show"); }
+
+    function openWallModal() {
+      hideTooltip();
+      wallModal.classList.add("show");
+      loadPublicWall();
+    }
+    function closeWallModal() { wallModal.classList.remove("show"); }
+
+    openFeedbackModalBtn.addEventListener("click", openFeedbackModal);
+    document.getElementById("feedbackModalClose").addEventListener("click", closeFeedbackModal);
+    feedbackModal.addEventListener("click", (ev) => { if (ev.target === feedbackModal) closeFeedbackModal(); });
+    document.getElementById("switchToWallBtn").addEventListener("click", () => { closeFeedbackModal(); openWallModal(); });
+
+    openWallModalBtn.addEventListener("click", openWallModal);
+    document.getElementById("wallModalClose").addEventListener("click", closeWallModal);
+    wallModal.addEventListener("click", (ev) => { if (ev.target === wallModal) closeWallModal(); });
+    document.getElementById("wallOpenFeedbackBtn").addEventListener("click", () => { closeWallModal(); openFeedbackModal(); });
+
+    document.addEventListener("keydown", (ev) => {
+      if (ev.key !== "Escape") return;
+      if (mobileDlModal.classList.contains("show")) closeMobileDlModal(false);
+      else if (feedbackModal.classList.contains("show")) closeFeedbackModal();
+      else if (wallModal.classList.contains("show")) closeWallModal();
+      else if (tunerModal.classList.contains("show")) tunerModal.classList.remove("show");
+    });
+
+    // ---------- 3. 波形、显卡显存探测与默认 CPU 调度 ----------
+    const BACKEND_PREF_KEY = "hanfire_backend_pref_v2";
+    // 默认采用纯处理器推理 ("wasm")；若用户曾主动切换过显卡加速且本次探测显存充足，则沿用其选择
+    let computeBackendPref = localStorage.getItem(BACKEND_PREF_KEY) || "wasm";
+    if (!["webgpu", "wasm"].includes(computeBackendPref)) computeBackendPref = "wasm";
+    let gpuHardwareAvailable = false;
+    let gpuVramOk = false;
+    let gpuVramReason = "";
+    let gpuAdapterName = "";
+    let gpuPromptDismissed = false;
+    let lastKnownThreads = window.crossOriginIsolated ? Math.min(8, Math.max(2, navigator.hardwareConcurrency || 4)) : 1;
+
+    // 手机/移动设备识别 + 流量提醒状态
+    function isMobileDevice() {
+      const ua = navigator.userAgent || "";
+      if (/Android|iPhone|iPad|iPod|Mobile|HarmonyOS|MicroMessenger|MQQBrowser/i.test(ua)) return true;
+      return (navigator.maxTouchPoints || 0) > 1 && window.innerWidth <= 820;
+    }
+    let mobileDownloadPending = false;
+    let envInspected = false;
+    let pendingSynthBeforeInspect = null;
+    let lastCacheProbe = null;
+    let pendingSynthAfterLoad = null;
+
+    function updateGpuPromptBanner(activeBackend) {
+      if (gpuHardwareAvailable && gpuVramOk && activeBackend !== "webgpu" && !gpuPromptDismissed) {
+        gpuPromptText.textContent = "⚡ 检测到本机显卡可用且显存充足，可切换至显卡加速（提速 2~4 倍）";
+        gpuPromptBar.classList.add("show");
+      } else {
+        gpuPromptBar.classList.remove("show");
+      }
+    }
+
+    function requestBackendSwitch(nextPref) {
+      computeBackendPref = nextPref;
+      try { localStorage.setItem(BACKEND_PREF_KEY, nextPref); } catch (_) {}
+      // 若语音引擎尚未按需加载，仅记录偏好并更新徽章，绝不提前下载模型
+      if (!engineReady) {
+        updateBackendBadge(nextPref === "webgpu" && gpuHardwareAvailable && gpuVramOk ? "webgpu" : "wasm", lastKnownThreads);
+        updateGpuPromptBanner(nextPref);
+        showToast(nextPref === "webgpu" ? "⚡ 已预设为显卡加速（点击合成后自动生效）" : "⚙ 已切换为纯处理器推理");
+        return;
+      }
+      if (isBusy) return;
+      isBusy = true;
+      synthBtn.disabled = true;
+      clearCacheBtn.disabled = true;
+      gpuPromptBar.classList.remove("show");
+      statusText.textContent = nextPref === "wasm" ? "正在切换为纯处理器模式..." : "正在开启显卡加速...";
+      worker.postMessage({ cmd: "set_backend", backendPref: nextPref });
+    }
+
+    switchToGpuBtn.addEventListener("click", () => requestBackendSwitch("webgpu"));
+    dismissGpuPromptBtn.addEventListener("click", () => {
+      gpuPromptDismissed = true;
+      gpuPromptBar.classList.remove("show");
+    });
+
+    function updateBackendBadge(backend, threads) {
+      if (typeof threads === "number" && threads > 0) lastKnownThreads = threads;
+      if (backend === "webgpu") {
+        backendBadge.textContent = "⚡ 显卡加速开启";
+        backendBadge.className = "badge gpu";
+        backendBadge.style.cursor = "pointer";
+        backendBadge.dataset.tipTitle = "显卡加速运行中";
+        backendBadge.dataset.tipBody = "点击可随时切换回纯处理器模式（如需降低显卡负载或保持静音）。";
+        document.getElementById("mBackend").textContent = "显卡加速";
+      } else if (gpuHardwareAvailable && gpuVramOk) {
+        backendBadge.textContent = threads > 1 ? "⚙ 纯处理器推理 · 多核" : "⚙ 纯处理器推理";
+        backendBadge.className = "badge wasm";
+        backendBadge.style.cursor = "pointer";
+        backendBadge.dataset.tipTitle = "本机支持显卡加速";
+        backendBadge.dataset.tipBody = "当前默认使用纯处理器稳定运行；点击可一键切换为显卡加速（显存已通过安全探测，可提速 2~4 倍）。";
+        document.getElementById("mBackend").textContent = threads > 1 ? "多核处理器" : "纯处理器";
+      } else if (gpuVramReason && /显存|缓冲区|内存/.test(gpuVramReason)) {
+        backendBadge.textContent = threads > 1 ? "⚙ 纯处理器推理 · 多核" : "⚙ 纯处理器推理";
+        backendBadge.className = "badge wasm";
+        backendBadge.style.cursor = "pointer";
+        backendBadge.dataset.tipTitle = "已自动启用处理器模式";
+        backendBadge.dataset.tipBody = `${gpuVramReason}。点击可查看显卡加速说明。`;
+        document.getElementById("mBackend").textContent = threads > 1 ? "多核处理器" : "纯处理器";
+      } else if (threads > 1) {
+        backendBadge.textContent = "⚙ 纯处理器推理 · 多核";
+        backendBadge.className = "badge wasm";
+        backendBadge.style.cursor = "pointer";
+        backendBadge.dataset.tipTitle = "想开启显卡加速？";
+        backendBadge.dataset.tipBody = "点击查看《浏览器显卡加速开启教程》（支持 Windows / macOS / Linux）。";
+        document.getElementById("mBackend").textContent = "多核处理器";
+      } else {
+        backendBadge.textContent = "⚙ 纯处理器推理";
+        backendBadge.className = "badge wasm";
+        backendBadge.style.cursor = "pointer";
+        backendBadge.dataset.tipTitle = "想开启显卡加速？";
+        backendBadge.dataset.tipBody = "点击查看《浏览器显卡加速开启教程》（支持 Windows / macOS / Linux）。";
+        document.getElementById("mBackend").textContent = "纯处理器";
+      }
+      updateGpuPromptBanner(backend);
+    }
+
+    backendBadge.addEventListener("click", () => {
+      hideTooltip();
+      if (gpuHardwareAvailable && gpuVramOk) {
+        requestBackendSwitch(computeBackendPref === "webgpu" ? "wasm" : "webgpu");
+        return;
+      }
+      switchMainView("about");
+      setTimeout(() => {
+        document.getElementById("gpuGuideSection")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 60);
+    });
+
+    function showFallback(reason) {
+      if (reason) {
+        fallbackNote.textContent = `ℹ️ ${reason}`;
+        fallbackNote.classList.add("show");
+      } else {
+        fallbackNote.classList.remove("show");
+      }
+    }
+
+    function getThemeCssVar(name, fallback) {
+      const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      return v || fallback;
+    }
+
+    function drawWaveform(samples) {
+      lastWaveSamples = samples;
+      const ctx = waveCanvas.getContext("2d");
+      const w = waveCanvas.width, h = waveCanvas.height;
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = getThemeCssVar("--canvas-bg", "#f4efe3");
+      ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = getThemeCssVar("--canvas-mid", "rgba(195, 68, 53, 0.24)");
+      ctx.beginPath();
+      ctx.moveTo(0, h / 2);
+      ctx.lineTo(w, h / 2);
+      ctx.stroke();
+      if (!samples || samples.length === 0) return;
+      ctx.strokeStyle = getThemeCssVar("--canvas-wave-a", "#c34435");
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      const step = Math.max(1, samples.length / w);
+      for (let x = 0; x < w; x++) {
+        const idx = Math.min(samples.length - 1, Math.floor(x * step));
+        const amp = Math.max(-1, Math.min(1, samples[idx]));
+        const y = h / 2 - amp * (h * 0.44);
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    drawWaveform(null);
+
+    function renderGloss(glossList) {
+      currentGloss = glossList || [];
+      glossRibbon.innerHTML = "";
+      glossCount.textContent = `共 ${currentGloss.length} 字 · 悬浮看详解 · 点击可调音`;
+      currentGloss.forEach((item, idx) => {
+        const div = document.createElement("div");
+        div.className = "char-box" + (item.isCustom ? " tuned" : "");
+        const tip = buildCharTooltip(item, selectedEra);
+        div.dataset.tipTitle = tip.title;
+        div.dataset.tipBody = tip.body;
+        div.dataset.tipFoot = tip.foot;
+        const subLbl = formatGlossSublabel(item, selectedEra);
+        div.innerHTML = `
+          <span class="edit-dot">${item.isCustom ? "✓" : "✏"}</span>
+          <div class="hz">${escapeHtml(item.char)}</div>
+          <div class="ipa">/${escapeHtml(item.ipa)}/</div>
+          <div class="tok">${escapeHtml(subLbl)}</div>
+        `;
+        div.addEventListener("click", () => { hideTooltip(); openTunerModal(idx); });
+        glossRibbon.appendChild(div);
+      });
+    }
+
+    function schedulePreviewCompile() {
+      if (previewTimer) clearTimeout(previewTimer);
+      previewTimer = setTimeout(() => {
+        const txt = textInput.value.trim();
+        if (!txt) {
+          glossRibbon.innerHTML = '<span style="color:var(--muted);font-size:0.84rem;">请输入古诗文汉字...</span>';
+          glossCount.textContent = "0 字";
+          return;
+        }
+        worker.postMessage({ cmd: "preview_compile", reqId: ++previewReqSeq, text: txt, era: selectedEra });
+      }, 220);
+    }
+
+    function renderAdjustmentsBanner() {
+      if (userAdjustments.length === 0) {
+        adjBanner.classList.remove("show");
+        return;
+      }
+      adjBanner.classList.add("show");
+      const text = userAdjustments.map((a) => `${a.char}→[${a.char}=${a.spec}]`).join("  ");
+      adjSummary.textContent = `🎛 本次已前端调音 ${userAdjustments.length} 字：${text}`;
+    }
+
+    document.getElementById("syncAdjToFbBtn").addEventListener("click", () => {
+      if (userAdjustments.length === 0) return;
+      fbIpa.value = userAdjustments.map((a) => `[${a.char}=${a.spec}]`).join(" ");
+      openFeedbackModal();
+      setTimeout(() => fbIpa.focus(), 60);
+    });
+    document.getElementById("clearAdjBtn").addEventListener("click", () => {
+      userAdjustments = [];
+      renderAdjustmentsBanner();
+    });
+
+    // ---------- 4. 单字可视化调音弹窗 ----------
+    function setTunerTab(paneName) {
+      document.querySelectorAll("#tunerTabs .pill-btn").forEach((b) => b.classList.toggle("active", b.dataset.tpane === paneName));
+      document.querySelectorAll(".tuner-pane").forEach((p) => p.classList.toggle("active", p.id === `tpane-${paneName}`));
+    }
+    document.querySelectorAll("#tunerTabs .pill-btn").forEach((btn) => {
+      btn.addEventListener("click", () => setTunerTab(btn.dataset.tpane));
+    });
+
+    function evaluateCandidateSpec(specStr) {
+      activeTunerSpec = (specStr || "").trim();
+      if (!activeTunerItem) return;
+      if (!activeTunerSpec) {
+        activeTunerEval = null;
+        tunerPreview.textContent = `预览：恢复默认读音`;
+        return;
+      }
+      worker.postMessage({
+        cmd: "eval_char_spec",
+        reqId: ++evalReqSeq,
+        era: selectedEra,
+        char: activeTunerItem.char,
+        spec: activeTunerSpec,
+      });
+    }
+
+    function updateMcToneOptions() {
+      const yl = tunerYunleiSel.value || "";
+      const isRu = yl.includes("_入");
+      const tones = isRu
+        ? (rhymeCatalog?.tuner_meta?.mc_tones_ru || ["入陰", "入陽"])
+        : (rhymeCatalog?.tuner_meta?.mc_tones_shu || ["平陰", "平陽", "上陰", "上陽", "去陰", "去陽"]);
+      const prev = tunerToneSel.value;
+      tunerToneSel.innerHTML = tones.map((t) => `<option value="${t}">${t}</option>`).join("");
+      if (tones.includes(prev)) tunerToneSel.value = prev;
+    }
+
+    async function openTunerModal(glossIdx) {
+      const item = currentGloss[glossIdx];
+      if (!item) return;
+      if (!rhymeCatalog) await ensureRhymeCatalogLoaded();
+      activeTunerItem = item;
+      activeTunerSpec = item.spec || "";
+      activeTunerEval = null;
+      tunerAudio.style.display = "none";
+      tunerTitle.textContent = `单字调音 · 「${item.char}」（${ERA_NAMES[selectedEra] || selectedEra}）`;
+      const subLbl = formatGlossSublabel(item, selectedEra);
+      tunerCurrentInfo.textContent = `当前拟音：/${item.ipa}/${subLbl ? "  ·  " + subLbl : ""}`;
+      console.log("[Hanfire] 打开单字调音:", { char: item.char, era: selectedEra, ipa: item.ipa, tokens: item.tokSpec || item.tokens });
+      tunerMcYunTab.style.display = selectedEra === "mc" ? "" : "none";
+
+      // 填充多音字候选
+      tunerPolyList.innerHTML = "";
+      const polys = item.polyphones || [];
+      if (polys.length === 0) {
+        tunerPolyList.innerHTML = '<div style="font-size:0.8rem;color:var(--muted);padding:6px 0;">当前字在默认词典中无其他多音项，请切换到「借同音字」「中古换韵/换调」或「直接改读音」调整。</div>';
+      } else {
+        for (const p of polys) {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "poly-opt" + (p.spec === item.spec ? " selected" : "");
+          const decoded = selectedEra === "mc" ? decodeMcCategory(p.spec) : "";
+          const ipaDesc = explainIpaSymbols(p.ipa).slice(0, 3).join("\n• ");
+          btn.dataset.tipTitle = `${item.char} · ${p.spec}（/${p.ipa}/）`;
+          btn.dataset.tipBody = [decoded ? `音韵归类：${decoded}` : "", ipaDesc ? `拟音拆解：\n• ${ipaDesc}` : ""].filter(Boolean).join("\n") || `点击切换为 /${p.ipa}/`;
+          btn.innerHTML = `<span><strong>${escapeHtml(p.spec)}</strong>${decoded ? `<span style="font-size:0.74rem;color:var(--muted);margin-left:6px;">${escapeHtml(decoded)}</span>` : ""}</span><span style="font-family:var(--mono);font-size:0.76rem;color:var(--gold);">/${escapeHtml(p.ipa)}/</span>`;
+          btn.addEventListener("click", () => {
+            tunerPolyList.querySelectorAll(".poly-opt").forEach((x) => x.classList.remove("selected"));
+            btn.classList.add("selected");
+            evaluateCandidateSpec(p.spec);
+          });
+          tunerPolyList.appendChild(btn);
+        }
+      }
+
+      tunerSameInput.value = item.spec && item.spec.startsWith("同") ? item.spec.slice(1) : "";
+      tunerIpaInput.value = item.spec || item.ipa || "";
+      tunerPreview.textContent = item.spec
+        ? `当前已调整：[${item.char}=${item.spec}] → /${item.ipa}/`
+        : `当前默认读音：/${item.ipa}/`;
+
+      setTunerTab(polys.length > 0 ? "poly" : "ipa");
+      tunerModal.classList.add("show");
+    }
+
+    tunerSameInput.addEventListener("input", () => {
+      const v = tunerSameInput.value.trim();
+      if (v.length >= 1) evaluateCandidateSpec(`同${v[0]}`);
+    });
+    tunerYunleiSel.addEventListener("change", () => {
+      updateMcToneOptions();
+      evaluateCandidateSpec(`${tunerYunleiSel.value}_${tunerToneSel.value}`);
+    });
+    tunerToneSel.addEventListener("change", () => {
+      evaluateCandidateSpec(`${tunerYunleiSel.value}_${tunerToneSel.value}`);
+    });
+    tunerIpaInput.addEventListener("input", () => {
+      evaluateCandidateSpec(tunerIpaInput.value.trim());
+    });
+
+    function buildClausePreviewTextWithOverride(item, specStr) {
+      const norm = textInput.value.replace(/\r\n/g, "\n");
+      const replacement = specStr ? `[${item.char}=${specStr}]` : item.char;
+      const modified = norm.slice(0, item.startPos) + replacement + norm.slice(item.endPos);
+      // 仅提取当前所在分句试听，速度极快
+      const clauses = modified.split(/[，,。！？!?;；\n]+/).filter((s) => s.trim().length > 0);
+      return clauses[item.clauseIdx] || modified;
+    }
+
+    document.getElementById("tunerAuditionBtn").addEventListener("click", () => {
+      if (!engineReady || isBusy || !activeTunerItem) return;
+      const clauseText = buildClausePreviewTextWithOverride(activeTunerItem, activeTunerSpec);
+      runSynthesize(clauseText, selectedEra, { sourceType: "tuner", label: `试听调音分句：${clauseText}` });
+    });
+
+    document.getElementById("tunerResetBtn").addEventListener("click", () => {
+      if (!activeTunerItem) return;
+      const norm = textInput.value.replace(/\r\n/g, "\n");
+      textInput.value = norm.slice(0, activeTunerItem.startPos) + activeTunerItem.char + norm.slice(activeTunerItem.endPos);
+      userAdjustments = userAdjustments.filter((a) => !(a.char === activeTunerItem.char && a.clauseIdx === activeTunerItem.clauseIdx));
+      renderAdjustmentsBanner();
+      tunerModal.classList.remove("show");
+      schedulePreviewCompile();
+    });
+
+    document.getElementById("tunerApplyBtn").addEventListener("click", () => {
+      if (!activeTunerItem) return;
+      const spec = activeTunerSpec.trim();
+      const norm = textInput.value.replace(/\r\n/g, "\n");
+      const rep = spec ? `[${activeTunerItem.char}=${spec}]` : activeTunerItem.char;
+      textInput.value = norm.slice(0, activeTunerItem.startPos) + rep + norm.slice(activeTunerItem.endPos);
+      if (spec) {
+        const rec = {
+          char: activeTunerItem.char,
+          clauseIdx: activeTunerItem.clauseIdx,
+          beforeIpa: activeTunerItem.ipa,
+          beforeTokens: activeTunerItem.tokSpec || activeTunerItem.tokens,
+          spec,
+          afterIpa: activeTunerEval?.ipa || spec,
+          afterTokens: activeTunerEval?.tokSpec || activeTunerEval?.tokens || "",
+        };
+        const idx = userAdjustments.findIndex((a) => a.char === rec.char && a.clauseIdx === rec.clauseIdx);
+        if (idx >= 0) userAdjustments[idx] = rec;
+        else userAdjustments.push(rec);
+        renderAdjustmentsBanner();
+        // 自动同步填进下方 IPA 纠正栏（若用户还没手写）
+        if (!fbIpa.value.trim() || fbIpa.dataset.autoFilled === "1") {
+          fbIpa.value = userAdjustments.map((a) => `[${a.char}=${a.spec}]`).join(" ");
+          fbIpa.dataset.autoFilled = "1";
+        }
+      }
+      tunerModal.classList.remove("show");
+      schedulePreviewCompile();
+    });
+    fbIpa.addEventListener("input", () => { fbIpa.dataset.autoFilled = "0"; });
+
+    document.getElementById("tunerCloseBtn").addEventListener("click", () => tunerModal.classList.remove("show"));
+    tunerModal.addEventListener("click", (ev) => {
+      if (ev.target === tunerModal) tunerModal.classList.remove("show");
+    });
+
+    // ---------- 5. 全韵系音库试听（按需懒加载，不阻塞首屏） ----------
+    let _rhymeCatalogPromise = null;
+    function ensureRhymeCatalogLoaded() {
+      if (rhymeCatalog) return Promise.resolve(rhymeCatalog);
+      if (_rhymeCatalogPromise) return _rhymeCatalogPromise;
+      _rhymeCatalogPromise = (async () => {
+        try {
+          const resp = await fetch(`./assets/rhyme_catalog.json?v=${ASSET_VER}`, { cache: "force-cache" });
+          if (!resp.ok) return null;
+          rhymeCatalog = await resp.json();
+          const yls = rhymeCatalog?.tuner_meta?.mc_yunleis || [];
+          tunerYunleiSel.innerHTML = yls.map((yl) => `<option value="${yl}">${yl.replace("_", " · ")}</option>`).join("");
+          updateMcToneOptions();
+          renderRhymeCatalog();
+          return rhymeCatalog;
+        } catch (err) {
+          rhymeCountBadge.textContent = "韵表加载失败";
+          _rhymeCatalogPromise = null;
+          return null;
+        }
+      })();
+      return _rhymeCatalogPromise;
+    }
+
+    function renderRhymeCatalog() {
+      if (!rhymeCatalog) return;
+      const eraObj = rhymeCatalog.eras[rhymeEra];
+      if (!eraObj) return;
+      mcDetailWrap.style.display = rhymeEra === "mc" ? "inline-flex" : "none";
+      const list = rhymeEra === "mc" && mcDetailToggle.checked ? eraObj.detailed : eraObj.summary;
+      const q = rhymeSearch.value.trim().toLowerCase();
+      const filtered = q
+        ? list.filter((x) =>
+            `${x.group} ${x.name} ${x.ipa} ${x.sample} ${x.note} ${x.yunlei || ""}`.toLowerCase().includes(q)
+          )
+        : list;
+      rhymeCountBadge.textContent = `${eraObj.title} · 共 ${filtered.length} / ${list.length} 韵`;
+
+      const groups = new Map();
+      for (const item of filtered) {
+        if (!groups.has(item.group)) groups.set(item.group, []);
+        groups.get(item.group).push(item);
+      }
+
+      rhymeCatalogContainer.innerHTML = "";
+      if (filtered.length === 0) {
+        rhymeCatalogContainer.innerHTML = '<div style="color:var(--muted);padding:18px 0;">未找到匹配的韵部或汉字。</div>';
+        return;
+      }
+
+      for (const [grpName, items] of groups.entries()) {
+        const h = document.createElement("div");
+        h.className = "rhyme-group-title";
+        if (TERM_GLOSSARY[grpName]) {
+          h.innerHTML = `<span class="term" data-term="${escapeHtml(grpName)}">${escapeHtml(grpName)}</span>（${items.length}）`;
+        } else {
+          h.textContent = `${grpName}（${items.length}）`;
+        }
+        rhymeCatalogContainer.appendChild(h);
+
+        const grid = document.createElement("div");
+        grid.className = "rhyme-grid";
+        for (const it of items) {
+          const card = document.createElement("div");
+          card.className = "rhyme-card";
+          card.dataset.rid = it.id;
+          const rTip = buildRhymeCardTooltip(it, rhymeEra);
+          card.innerHTML = `
+            <div class="rhyme-tip-zone" style="cursor:help;">
+              <div class="rhyme-top">
+                <span class="rhyme-name">${escapeHtml(it.name)}</span>
+                <span class="rhyme-ipa">/${escapeHtml(it.ipa)}/</span>
+              </div>
+              <div class="rhyme-sample">${escapeHtml(it.sample)}</div>
+              <div class="rhyme-note">${escapeHtml(it.note)}</div>
+            </div>
+            <div class="rhyme-btns">
+              <button type="button" class="btn-primary btn-sm listen-btn" style="flex:1;">▶ 听本韵</button>
+              <button type="button" class="btn-secondary btn-sm use-btn">写入工作台</button>
+            </div>
+          `;
+          const tipZone = card.querySelector(".rhyme-tip-zone");
+          tipZone.dataset.tipTitle = rTip.title;
+          tipZone.dataset.tipBody = rTip.body;
+          tipZone.dataset.tipFoot = rTip.foot;
+          card.querySelector(".listen-btn").addEventListener("click", () => {
+            if (isBusy) return;
+            document.querySelectorAll(".rhyme-card.playing").forEach((c) => c.classList.remove("playing"));
+            card.classList.add("playing");
+            rhymePlayerBar.classList.add("show");
+            rpTitle.textContent = `${ERA_NAMES[rhymeEra]} · ${it.group} · ${it.name}（${it.sample}）`;
+            rpStatus.textContent = engineReady ? "正在合成试听音频..." : "正在准备古音语音库并合成...";
+            rhymeDownload.style.display = "none";
+            runSynthesize(it.sample, rhymeEra, {
+              sourceType: "rhyme",
+              rhymeId: it.id,
+              rhymeName: `${it.group}·${it.name}`,
+              text: it.sample,
+            });
+          });
+          card.querySelector(".use-btn").addEventListener("click", () => {
+            selectedEra = rhymeEra;
+            document.querySelectorAll(".era-btn").forEach((b) => b.classList.toggle("active", b.dataset.era === selectedEra));
+            textInput.value = it.sample;
+            switchMainView("studio");
+            schedulePreviewCompile();
+          });
+          grid.appendChild(card);
+        }
+        rhymeCatalogContainer.appendChild(grid);
+      }
+    }
+
+    document.querySelectorAll("#rhymeEraPills .pill-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("#rhymeEraPills .pill-btn").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        rhymeEra = btn.dataset.rera;
+        renderRhymeCatalog();
+      });
+    });
+    mcDetailToggle.addEventListener("change", renderRhymeCatalog);
+    rhymeSearch.addEventListener("input", renderRhymeCatalog);
+
+    rpRateBtn.addEventListener("click", () => {
+      openFeedbackModal();
+    });
+
+    // ---------- 6. 合成入口（含手机端模型下载流量确认门禁） ----------
+    const mobileDlSizeText = document.getElementById("mobileDlSizeText");
+    function formatRemainingDownloadMB() {
+      const missingModelBytes = lastCacheProbe ? lastCacheProbe.missingGzBytes : 170 * 1024 * 1024;
+      // 加上约 7.2 MB 的推理核心运行库体积
+      const totalEstMB = (missingModelBytes + 7.2 * 1e6) / 1e6;
+      return `约 ${Math.max(1, totalEstMB).toFixed(1)} MB`;
+    }
+    function openMobileDlModal(synthArgs) {
+      pendingSynthAfterLoad = synthArgs;
+      mobileDlSizeText.textContent = formatRemainingDownloadMB();
+      mobileDlModal.classList.add("show");
+    }
+    function startModelLoadAndThenSynth(synthArgs) {
+      pendingSynthAfterLoad = synthArgs;
+      mobileDownloadPending = false;
+      isBusy = true;
+      synthBtn.disabled = true;
+      clearCacheBtn.disabled = true;
+      const allCached = Boolean(lastCacheProbe && lastCacheProbe.allCached);
+      synthBtn.textContent = allCached ? "正在唤醒语音引擎..." : "正在下载古音语音库...";
+      statusText.textContent = allCached ? "正在读取本地语音库并初始化引擎..." : "正在获取古音语音库...";
+      barFill.style.width = "2%";
+      pctText.textContent = "0%";
+      worker.postMessage({ cmd: "preload", backendPref: computeBackendPref });
+    }
+    function closeMobileDlModal(confirmDownload) {
+      mobileDlModal.classList.remove("show");
+      if (!confirmDownload) {
+        pendingSynthAfterLoad = null;
+        showToast("已取消下载，未消耗模型流量");
+        return;
+      }
+      startModelLoadAndThenSynth(pendingSynthAfterLoad);
+    }
+    document.getElementById("mobileDlConfirmBtn").addEventListener("click", () => closeMobileDlModal(true));
+    document.getElementById("mobileDlCancelBtn").addEventListener("click", () => closeMobileDlModal(false));
+    document.getElementById("mobileDlCloseBtn").addEventListener("click", () => closeMobileDlModal(false));
+    mobileDlModal.addEventListener("click", (ev) => { if (ev.target === mobileDlModal) closeMobileDlModal(false); });
+
+    function runSynthesize(text, era, requestMeta) {
+      if (isBusy) return;
+      if (!envInspected) {
+        pendingSynthBeforeInspect = { text, era, requestMeta };
+        synthBtn.disabled = true;
+        synthBtn.textContent = "正在检测本地语音库...";
+        statusText.textContent = "正在读取本地缓存状态，请稍候...";
+        return;
+      }
+      if (!engineReady) {
+        if (mobileDownloadPending) {
+          openMobileDlModal({ text, era, requestMeta });
+        } else {
+          startModelLoadAndThenSynth({ text, era, requestMeta });
+        }
+        return;
+      }
+      isBusy = true;
+      synthBtn.disabled = true;
+      synthBtn.textContent = "正在合成古音拟音...";
+      barFill.style.width = "3%";
+      pctText.textContent = "0%";
+      statusText.textContent = "正在分析古音读音...";
+      console.log("[Hanfire] 开始合成请求:", {
+        era,
+        voiceKey: voiceSelect.value,
+        backendPref: computeBackendPref,
+        numStep: parseInt(stepsSelect.value, 10),
+        speed: parseFloat(speedRange.value),
+        sourceType: requestMeta?.sourceType || "synth",
+        text,
+      });
+      worker.postMessage({
+        cmd: "synthesize",
+        payload: {
+          text,
+          era,
+          voiceKey: voiceSelect.value,
+          backend: computeBackendPref,
+          numStep: parseInt(stepsSelect.value, 10),
+          guidanceScale: 1.0,
+          speed: parseFloat(speedRange.value),
+          customPrompt: voiceSelect.value === "custom" ? customPromptObj : null,
+          requestMeta: {
+            ...requestMeta,
+            text,
+            era,
+            voiceKey: voiceSelect.value,
+            speed: parseFloat(speedRange.value),
+            numStep: parseInt(stepsSelect.value, 10),
+          },
+        },
+      });
+    }
+
+    synthBtn.addEventListener("click", () => {
+      const txt = textInput.value.trim();
+      if (!txt) return;
+      runSynthesize(txt, selectedEra, { sourceType: "synth" });
+    });
+
+    textInput.addEventListener("keydown", (ev) => {
+      if ((ev.ctrlKey || ev.metaKey) && ev.key === "Enter") {
+        ev.preventDefault();
+        const txt = textInput.value.trim();
+        if (txt && !synthBtn.disabled) runSynthesize(txt, selectedEra, { sourceType: "synth" });
+      }
+    });
+
+    // ---------- 7. 打分与提交 ----------
+    function setStar(val) {
+      selectedStar = val;
+      document.querySelectorAll("#starPicker .star-btn").forEach((b) => {
+        b.classList.toggle("lit", parseInt(b.dataset.star, 10) <= val);
+      });
+      starHint.textContent = STAR_LABELS[val] || "请选择星级";
+    }
+    document.querySelectorAll("#starPicker .star-btn").forEach((btn) => {
+      btn.addEventListener("click", () => setStar(parseInt(btn.dataset.star, 10)));
+    });
+    document.querySelectorAll(".qtag").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const tag = btn.textContent.trim();
+        fbComment.value = fbComment.value.trim() ? `${fbComment.value.trim()}，${tag}` : tag;
+      });
+    });
+
+    function updateFeedbackContextBanner() {
+      if (!lastSynthRecord) return;
+      const r = lastSynthRecord;
+      const srcStr = r.sourceType === "rhyme" ? `单韵试听 [${r.rhymeName}]` : "自由合成";
+      const adjStr = userAdjustments.length > 0 ? ` · 附带 ${userAdjustments.length} 字前端调音记录` : "";
+      fbContext.textContent = `当前评审对象：${ERA_NAMES[r.era] || r.era} · ${srcStr} · 「${r.text.slice(0, 48)}${r.text.length > 48 ? "…" : ""}」${adjStr}`;
+    }
+
+    document.getElementById("feedbackForm").addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      fbStatus.className = "fb-msg";
+      fbStatus.textContent = "";
+
+      const nickname = fbNickname.value.trim();
+      const email = fbEmail.value.trim();
+      if (!nickname) {
+        applyProfileUI(true);
+        fbNickname.focus();
+        fbStatus.className = "fb-msg err";
+        fbStatus.textContent = "请填写昵称";
+        return;
+      }
+      if (selectedStar < 1 || selectedStar > 5) {
+        fbStatus.className = "fb-msg err";
+        fbStatus.textContent = "请点击星星选择 1~5 分评分";
+        return;
+      }
+
+      // 永久保存昵称与邮箱到 localStorage，并立即折叠隐藏输入框
+      try {
+        localStorage.setItem(PROFILE_KEY, JSON.stringify({ nickname, email }));
+      } catch (_) {}
+      applyProfileUI(false);
+
+      const rec = lastSynthRecord || {
+        sourceType: "synth",
+        rhymeId: "",
+        era: selectedEra,
+        text: textInput.value.trim(),
+        voiceKey: voiceSelect.value,
+        speed: parseFloat(speedRange.value),
+        numStep: parseInt(stepsSelect.value, 10),
+        gloss: currentGloss,
+      };
+      if (!rec.text) {
+        fbStatus.className = "fb-msg err";
+        fbStatus.textContent = "缺少文本内容，请先输入或合成一段古音";
+        return;
+      }
+
+      fbSubmitBtn.disabled = true;
+      fbSubmitBtn.textContent = "提交中...";
+      try {
+        const resp = await fetch("./api/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nickname,
+            email,
+            rating: selectedStar,
+            ipa_correction: fbIpa.value.trim(),
+            comment: fbComment.value.trim(),
+            era: rec.era,
+            source_type: rec.sourceType || "synth",
+            rhyme_id: rec.rhymeId || "",
+            input_text: rec.text,
+            voice_key: rec.voiceKey || voiceSelect.value,
+            speed: rec.speed ?? 1.0,
+            num_step: rec.numStep ?? 16,
+            compiled_gloss: (rec.gloss || currentGloss).map((g) => ({
+              char: g.char, ipa: g.ipa, tokens: g.tokSpec || g.tokens,
+            })),
+            user_adjustments: userAdjustments,
+            model_build_id: currentBuildId,
+            hp_website: hpWebsite.value,
+          }),
+        });
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        fbStatus.className = "fb-msg ok";
+        fbStatus.textContent = "✓ 感谢反馈！已保存至站长听审后台（审核公开后将在精选评论墙展示）。";
+        fbComment.value = "";
+        if (fbIpa.dataset.autoFilled !== "1") fbIpa.value = "";
+        setStar(0);
+      } catch (err) {
+        fbStatus.className = "fb-msg err";
+        fbStatus.textContent = `❌ 提交失败：${err.message || err}`;
+      } finally {
+        fbSubmitBtn.disabled = false;
+        fbSubmitBtn.textContent = "提交打分与反馈";
+      }
+    });
+
+    // ---------- 8. 精选公开评论墙（弹窗内展示） ----------
+    async function loadPublicWall() {
+      const era = wallEraFilter.value;
+      try {
+        const resp = await fetch(`./api/feedback/public?limit=24${era ? "&era=" + encodeURIComponent(era) : ""}`, { cache: "no-cache" });
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) throw new Error(data.error || "加载失败");
+        const count = Array.isArray(data.items) ? data.items.length : 0;
+        if (!era) openWallModalBtn.textContent = count > 0 ? `💭 评论列表 (${count})` : "💭 评论列表";
+        if (!data.items || data.items.length === 0) {
+          publicWallList.innerHTML = '<span style="color:var(--muted);font-size:0.84rem;">暂无站长公开的精选评论，欢迎成为第一位听审者！</span>';
+          return;
+        }
+        publicWallList.innerHTML = "";
+        for (const it of data.items) {
+          const card = document.createElement("div");
+          card.className = "wall-item";
+          const stars = "★".repeat(it.rating) + "☆".repeat(5 - it.rating);
+          const adjHtml = (it.user_adjustments && it.user_adjustments.length > 0)
+            ? `<div class="wall-ipa">🎛 调音：${escapeHtml(it.user_adjustments.map((a) => `${a.char}→${a.spec}`).join("  "))}</div>`
+            : "";
+          const ipaHtml = it.ipa_correction
+            ? `<div class="wall-ipa">IPA 纠正：${escapeHtml(it.ipa_correction)}</div>`
+            : "";
+          card.innerHTML = `
+            <div class="wall-head">
+              <span class="wall-user">${escapeHtml(it.nickname)} <span style="font-size:0.74rem;color:var(--muted);font-weight:400;">· ${escapeHtml(ERA_NAMES[it.era] || it.era)}</span></span>
+              <span class="wall-stars">${stars}</span>
+            </div>
+            <div class="wall-text">「${escapeHtml(it.input_text)}」</div>
+            ${adjHtml}${ipaHtml}
+            ${it.comment ? `<p class="wall-comment">${escapeHtml(it.comment)}</p>` : ""}
+            <div class="wall-foot">
+              <span>${escapeHtml((it.created_at || "").slice(0, 16).replace("T", " "))}</span>
+              <button type="button" class="btn-secondary btn-sm play-wall-btn">▶ 试听此句</button>
+            </div>
+          `;
+          card.querySelector(".play-wall-btn").addEventListener("click", () => {
+            closeWallModal();
+            switchMainView("studio");
+            selectedEra = it.era || "mc";
+            document.querySelectorAll(".era-btn").forEach((b) => b.classList.toggle("active", b.dataset.era === selectedEra));
+            textInput.value = it.input_text;
+            schedulePreviewCompile();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+            if (!isBusy) {
+              runSynthesize(it.input_text, selectedEra, { sourceType: "synth" });
+            }
+          });
+          publicWallList.appendChild(card);
+        }
+      } catch (err) {
+        publicWallList.innerHTML = `<span style="color:var(--muted);font-size:0.84rem;">暂无法加载评论列表（${escapeHtml(err.message || err)}）</span>`;
+      }
+    }
+    wallEraFilter.addEventListener("change", loadPublicWall);
+    document.getElementById("refreshWallBtn").addEventListener("click", loadPublicWall);
+
+    // ---------- 9. 控件绑定与 URL 深链支持 ----------
+    document.querySelectorAll(".era-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".era-btn").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        selectedEra = btn.dataset.era;
+        userAdjustments = [];
+        renderAdjustmentsBanner();
+        schedulePreviewCompile();
+      });
+    });
+
+    document.querySelectorAll(".preset-chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        textInput.value = chip.dataset.text;
+        selectedEra = chip.dataset.era;
+        document.querySelectorAll(".era-btn").forEach((b) => b.classList.toggle("active", b.dataset.era === selectedEra));
+        userAdjustments = [];
+        renderAdjustmentsBanner();
+        schedulePreviewCompile();
+      });
+    });
+
+    textInput.addEventListener("input", schedulePreviewCompile);
+    speedRange.addEventListener("input", () => { speedVal.textContent = `${Number(speedRange.value).toFixed(2)}x`; });
+    voiceSelect.addEventListener("change", () => { customUploadBox.classList.toggle("visible", voiceSelect.value === "custom"); });
+
+    clearCacheBtn.addEventListener("click", () => {
+      if (isBusy) return;
+      isBusy = true;
+      engineReady = false;
+      synthBtn.disabled = true;
+      clearCacheBtn.disabled = true;
+      statusText.textContent = "正在重置本地语音库...";
+      cacheBadge.textContent = "正在重置语音库...";
+      console.log("[Hanfire] 触发清理 IndexedDB 模型分片缓存");
+      worker.postMessage({ cmd: "clear_cache" });
+    });
+
+    let _pendingPromptsResolve = null;
+    function ensurePromptsReady() {
+      if (melFilterbank && defaultPromptItems) return Promise.resolve();
+      return new Promise((resolve) => {
+        _pendingPromptsResolve = resolve;
+        worker.postMessage({ cmd: "ensure_prompts" });
+      });
+    }
+
+    customAudioFile.addEventListener("change", async (ev) => {
+      const file = ev.target.files?.[0];
+      if (!file) return;
+      try {
+        customAudioInfo.textContent = "正在分析参考人声特征...";
+        await ensurePromptsReady();
+        const arrBuf = await file.arrayBuffer();
+        const tmpCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const decoded = await tmpCtx.decodeAudioData(arrBuf);
+        await tmpCtx.close();
+        const maxDur = Math.min(decoded.duration, 5.5);
+        const targetLen = Math.max(SR, Math.floor(maxDur * SR));
+        const offCtx = new OfflineAudioContext(1, targetLen, SR);
+        const src = offCtx.createBufferSource();
+        src.buffer = decoded;
+        src.connect(offCtx.destination);
+        src.start(0, 0, maxDur);
+        const rendered = await offCtx.startRendering();
+        const pcm24k = rendered.getChannelData(0);
+        const { melFlat, numFrames } = extractVocosMel24k(pcm24k, melFilterbank);
+        customPromptObj = {
+          label: file.name, frames_per_100w: 25.0,
+          prompt_items: defaultPromptItems, mel_shape: [numFrames, 100], mel_flat: melFlat,
+        };
+        console.log("[Hanfire] 自定义参考人声已提取:", { file: file.name, durationSec: +maxDur.toFixed(2), sampleRate: SR, melFrames: numFrames, melBins: 100 });
+        customAudioInfo.textContent = `✓ 已加载参考人声：${file.name}（${maxDur.toFixed(1)} 秒）`;
+      } catch (err) {
+        customAudioInfo.textContent = `❌ 音频解析失败: ${err.message || err}`;
+      }
+    });
+
+    // 支持从站长后台带参数跳转复现试听 (?era=mc&text=...&voice=...)
+    const qs = new URLSearchParams(window.location.search);
+    if (qs.get("era") && ERA_NAMES[qs.get("era")]) {
+      selectedEra = qs.get("era");
+      document.querySelectorAll(".era-btn").forEach((b) => b.classList.toggle("active", b.dataset.era === selectedEra));
+    }
+    if (qs.get("text")) textInput.value = qs.get("text");
+    if (qs.get("voice") && ["male_128Hz", "female_252Hz"].includes(qs.get("voice"))) voiceSelect.value = qs.get("voice");
+
+    // ---------- 10. Worker 消息调度 ----------
+    let _lastLoggedDlPct = -1;
+    worker.onmessage = (ev) => {
+      const msg = ev.data;
+      if (msg.type === "lexicon_ready") {
+        schedulePreviewCompile();
+      } else if (msg.type === "env_inspected") {
+        envInspected = true;
+        melFilterbank = msg.melFilterbank;
+        defaultPromptItems = msg.defaultPromptItems;
+        gpuHardwareAvailable = Boolean(msg.gpuHardwareAvailable);
+        gpuVramOk = Boolean(msg.gpuVramOk);
+        gpuVramReason = msg.gpuVramReason || "";
+        gpuAdapterName = msg.gpuAdapter || "";
+        lastCacheProbe = msg.cacheProbe || null;
+        // 若显存不足或硬件不可用，即使之前缓存过 webgpu 偏好也强制回到纯处理器
+        if (!(gpuHardwareAvailable && gpuVramOk)) {
+          computeBackendPref = "wasm";
+        }
+        updateBackendBadge(computeBackendPref === "webgpu" ? "webgpu" : "wasm", msg.threads);
+        schedulePreviewCompile();
+        console.log("[Hanfire] 硬件与本地缓存探测完成:", {
+          isMobile: isMobileDevice(),
+          defaultPref: computeBackendPref,
+          gpuHardwareAvailable,
+          gpuVramOk,
+          gpuVramReason: gpuVramReason || null,
+          gpuAdapter: gpuAdapterName || null,
+          gpuDiag: msg.gpuDiag || "",
+          cacheProbe: lastCacheProbe,
+        });
+
+        // 全端按需加载策略：首屏零模型/零引擎下载，点击「开始古音拟音合成」时再下载或唤醒！
+        const needNetDownload = Boolean(lastCacheProbe && lastCacheProbe.missingGzBytes > 0);
+        const allCached = Boolean(lastCacheProbe && lastCacheProbe.allCached);
+        engineReady = false;
+        isBusy = false;
+        synthBtn.disabled = false;
+        clearCacheBtn.disabled = false;
+        synthBtn.textContent = "开始古音拟音合成";
+        if (needNetDownload) {
+          mobileDownloadPending = isMobileDevice();
+          const estStr = formatRemainingDownloadMB();
+          cacheBadge.textContent = mobileDownloadPending ? `📱 语音库待下载 (${estStr})` : `⬇ 语音库待下载 (${estStr})`;
+          cacheBadge.className = "badge";
+          statusText.textContent = mobileDownloadPending
+            ? `古音词典已就绪；点击合成时将提示下载语音库（${estStr}，保护手机流量）`
+            : `古音词典已就绪；点击「开始古音拟音合成」时按需下载语音库（${estStr}，仅首次）`;
+          barFill.style.width = "0%";
+          pctText.textContent = "待下载";
+        } else if (allCached) {
+          mobileDownloadPending = false;
+          cacheBadge.textContent = "💾 本地语音库已缓存";
+          cacheBadge.className = "badge gpu";
+          statusText.textContent = "古音词典与本地语音库均已就绪，点击「开始古音拟音合成」即刻发声";
+          barFill.style.width = "100%";
+          pctText.textContent = "已缓存";
+        } else {
+          mobileDownloadPending = isMobileDevice();
+          cacheBadge.textContent = "⬇ 语音库按需加载";
+          cacheBadge.className = "badge";
+          statusText.textContent = "古音词典已就绪，点击「开始古音拟音合成」即可开始";
+          barFill.style.width = "0%";
+          pctText.textContent = "就绪";
+        }
+        if (pendingSynthBeforeInspect) {
+          const queued = pendingSynthBeforeInspect;
+          pendingSynthBeforeInspect = null;
+          runSynthesize(queued.text, queued.era, queued.requestMeta);
+        }
+      } else if (msg.type === "prompts_ready") {
+        melFilterbank = msg.melFilterbank;
+        defaultPromptItems = msg.defaultPromptItems;
+        if (_pendingPromptsResolve) {
+          const fn = _pendingPromptsResolve;
+          _pendingPromptsResolve = null;
+          fn();
+        }
+      } else if (msg.type === "status") {
+        statusText.textContent = msg.stage;
+      } else if (msg.type === "download_progress") {
+        statusText.textContent = msg.stage;
+        barFill.style.width = `${msg.pct}%`;
+        pctText.textContent = `${msg.pct}%`;
+        const fromCache = msg.phase === "cache" || (msg.cachedChunks > 0 && msg.downloadedChunks === 0);
+        cacheBadge.textContent = fromCache ? `💾 读取本地语音库 ${msg.pct}%` : `⬇ 准备语音库 ${msg.pct}%`;
+        if (msg.pct === 99 || msg.pct - _lastLoggedDlPct >= 20) {
+          _lastLoggedDlPct = msg.pct;
+          console.log("[Hanfire] 语音库分片进度:", {
+            pct: msg.pct,
+            modelKey: msg.modelKey,
+            loadedMB: +(msg.loadedBytes / 1e6).toFixed(2),
+            totalMB: +(msg.totalBytes / 1e6).toFixed(2),
+            cachedChunks: msg.cachedChunks,
+            downloadedChunks: msg.downloadedChunks,
+            totalChunks: msg.totalChunks,
+            speedMBps: +(msg.speedMBps || 0).toFixed(2),
+          });
+        }
+      } else if (msg.type === "cache_cleared") {
+        _lastLoggedDlPct = -1;
+        envInspected = false;
+        cacheBadge.textContent = "本地语音库已清空";
+        cacheBadge.className = "badge";
+        barFill.style.width = "0%";
+        pctText.textContent = "0%";
+        statusText.textContent = isMobileDevice()
+          ? "本地语音库已清空，点击合成时将重新提示下载"
+          : "本地语音库已清空，正在重新获取...";
+        console.log("[Hanfire] IndexedDB 模型缓存已清空");
+        worker.postMessage({ cmd: "inspect_env" });
+      } else if (msg.type === "ready") {
+        isBusy = false;
+        engineReady = true;
+        mobileDownloadPending = false;
+        melFilterbank = msg.melFilterbank;
+        defaultPromptItems = msg.defaultPromptItems;
+        currentBuildId = msg.cacheInfo?.buildId || "";
+        if (typeof msg.gpuHardwareAvailable === "boolean") gpuHardwareAvailable = msg.gpuHardwareAvailable;
+        if (typeof msg.gpuVramOk === "boolean") gpuVramOk = msg.gpuVramOk;
+        if (typeof msg.gpuVramReason === "string") gpuVramReason = msg.gpuVramReason;
+        if (msg.gpuAdapter) gpuAdapterName = msg.gpuAdapter;
+        if (msg.backendPref) computeBackendPref = msg.backendPref;
+        updateBackendBadge(msg.backend, msg.threads);
+        showFallback(msg.fallbackReason);
+        console.log("[Hanfire] 引擎就绪:", {
+          backend: msg.backend,
+          backendPref: msg.backendPref || computeBackendPref,
+          gpuHardwareAvailable,
+          gpuVramOk,
+          gpuVramReason: gpuVramReason || null,
+          gpuAdapter: msg.gpuAdapter || null,
+          gpuDiag: msg.gpuDiag || "",
+          wasmThreads: msg.threads,
+          crossOriginIsolated: msg.crossOriginIsolated,
+          quantization: "Weight-Only INT8 (MatMulNBits-8 bs=32 asym, FFN DP4A + Attn FP32)",
+          cacheInfo: msg.cacheInfo,
+        });
+        cacheBadge.textContent = "💾 本地语音库已就绪";
+        cacheBadge.className = "badge gpu";
+        statusText.textContent = msg.backend === "webgpu"
+          ? "⚡ 显卡加速已就绪，点击「开始古音拟音合成」即可试听"
+          : "古音引擎已就绪（纯处理器模式），点击「开始古音拟音合成」即可试听";
+        barFill.style.width = "100%";
+        pctText.textContent = "就绪";
+        synthBtn.disabled = false;
+        clearCacheBtn.disabled = false;
+        synthBtn.textContent = "开始古音拟音合成";
+        schedulePreviewCompile();
+        if (pendingSynthAfterLoad) {
+          const nextJob = pendingSynthAfterLoad;
+          pendingSynthAfterLoad = null;
+          runSynthesize(nextJob.text, nextJob.era, nextJob.requestMeta);
+        }
+      } else if (msg.type === "preview_result") {
+        if (msg.reqId === previewReqSeq) renderGloss(msg.gloss);
+      } else if (msg.type === "eval_char_result") {
+        if (msg.reqId === evalReqSeq) {
+          activeTunerEval = msg.ok ? msg : null;
+          if (msg.ok) {
+            console.log("[Hanfire] 单字调音解析:", { char: activeTunerItem?.char, spec: activeTunerSpec, ipa: msg.ipa, tokens: msg.tokSpec || msg.tokens });
+            tunerPreview.textContent = `预览：[${activeTunerItem?.char}=${activeTunerSpec}] → /${msg.ipa}/`;
+          } else {
+            tunerPreview.textContent = `⚠️ 无法识别「${activeTunerSpec}」，请检查音标或同音字拼写`;
+          }
+        }
+      } else if (msg.type === "compiled") {
+        updateBackendBadge(msg.backend, msg.threads);
+        showFallback(msg.fallbackReason);
+        if (!msg.requestMeta || msg.requestMeta.sourceType === "synth") {
+          renderGloss(msg.gloss);
+        }
+      } else if (msg.type === "progress") {
+        const pct = Math.min(96, Math.round((msg.done / msg.total) * 96));
+        barFill.style.width = `${pct}%`;
+        pctText.textContent = `${pct}%`;
+        const txt = `正在生成第 ${msg.coupletIdx}/${msg.coupletTotal} 句（${pct}%）`;
+        statusText.textContent = txt;
+        if (rhymePlayerBar.classList.contains("show")) rpStatus.textContent = txt;
+      } else if (msg.type === "result") {
+        isBusy = false;
+        synthBtn.disabled = false;
+        clearCacheBtn.disabled = false;
+        synthBtn.textContent = "开始古音拟音合成";
+        barFill.style.width = "100%";
+        pctText.textContent = "100%";
+        statusText.textContent = `✓ 拟音合成完成（时长 ${msg.durationSec.toFixed(2)} 秒）`;
+        if (msg.buildId) currentBuildId = msg.buildId;
+
+        const blob = new Blob([msg.wavBuffer], { type: "audio/wav" });
+        const meta = msg.requestMeta || { sourceType: "synth", era: selectedEra, text: textInput.value.trim() };
+
+        console.log("[Hanfire] 拟音合成完成:", {
+          sourceType: meta.sourceType,
+          era: meta.era,
+          backend: msg.backend,
+          wasmThreads: msg.threads,
+          durationSec: +msg.durationSec.toFixed(3),
+          elapsedMs: Math.round(msg.elapsedMs),
+          rtf: +msg.rtf.toFixed(3),
+          buildId: msg.buildId,
+          gloss: (msg.gloss || []).map((g) => `${g.char}:/${g.ipa}/[${g.tokSpec || g.tokens}]`),
+        });
+
+        if (meta.sourceType === "tuner") {
+          if (tunerBlobUrl) URL.revokeObjectURL(tunerBlobUrl);
+          tunerBlobUrl = URL.createObjectURL(blob);
+          tunerAudio.src = tunerBlobUrl;
+          tunerAudio.style.display = "block";
+          tunerAudio.play().catch(() => {});
+          return;
+        }
+
+        if (meta.sourceType === "rhyme") {
+          if (rhymeBlobUrl) URL.revokeObjectURL(rhymeBlobUrl);
+          rhymeBlobUrl = URL.createObjectURL(blob);
+          rhymeAudio.src = rhymeBlobUrl;
+          rhymeAudio.play().catch(() => {});
+          rhymeDownload.href = rhymeBlobUrl;
+          rhymeDownload.download = `hanfire_rhyme_${meta.rhymeId || "sample"}.wav`;
+          rhymeDownload.style.display = "inline-flex";
+          rpStatus.textContent = `✓ 合成完成（时长 ${msg.durationSec.toFixed(2)} 秒 · 耗时 ${(msg.elapsedMs / 1000).toFixed(1)} 秒）`;
+          lastSynthRecord = { ...meta, gloss: msg.gloss || [] };
+          updateFeedbackContextBanner();
+          recordSynthesisHistory(msg.wavBuffer, msg.durationSec, meta, []);
+          return;
+        }
+
+        // 主工作台合成结果
+        updateBackendBadge(msg.backend, msg.threads);
+        showFallback(msg.fallbackReason);
+        drawWaveform(msg.pcmPreview);
+        document.getElementById("mDur").textContent = `${msg.durationSec.toFixed(2)} 秒`;
+        document.getElementById("mTime").textContent = `${(msg.elapsedMs / 1000).toFixed(2)} 秒`;
+        document.getElementById("mRtf").textContent = msg.rtf < 1.0
+          ? `快于实时`
+          : `${msg.rtf.toFixed(1)}倍时长`;
+
+        if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
+        currentBlobUrl = URL.createObjectURL(blob);
+        audioPlayer.src = currentBlobUrl;
+        audioPlayer.play().catch(() => {});
+        downloadLink.href = currentBlobUrl;
+        downloadLink.download = `hanfire_${selectedEra}.wav`;
+        downloadLink.style.display = "inline-flex";
+        document.getElementById("jumpCompareBtn").style.display = "inline-flex";
+
+        lastSynthRecord = { ...meta, gloss: msg.gloss || currentGloss };
+        updateFeedbackContextBanner();
+        recordSynthesisHistory(msg.wavBuffer, msg.durationSec, meta, userAdjustments);
+      } else if (msg.type === "error") {
+        isBusy = false;
+        synthBtn.disabled = !engineReady;
+        clearCacheBtn.disabled = false;
+        synthBtn.textContent = engineReady ? "开始古音拟音合成" : "加载失败";
+        statusText.textContent = `❌ 发生错误，请打开控制台查看详情`;
+        console.error("[Hanfire] Worker error:", msg.message);
+      }
+    };
+
+    // ---------- 11. 合成历史记录 (IndexedDB 持久化) + 双轨波形对比器 ----------
+    const histNavTab = document.getElementById("histNavTab");
+    const histListEl = document.getElementById("histList");
+    const cmpSelA = document.getElementById("cmpSelA");
+    const cmpSelB = document.getElementById("cmpSelB");
+    const cmpModeSel = document.getElementById("cmpModeSel");
+    const cmpAxisSel = document.getElementById("cmpAxisSel");
+    const compareCanvas = document.getElementById("compareCanvas");
+    const cmpMetricsBody = document.getElementById("cmpMetricsBody");
+    const cmpSimBadge = document.getElementById("cmpSimBadge");
+    const cmpAudio = document.getElementById("cmpAudio");
+
+    let historyItems = [];
+    let uploadedTracks = { A: null, B: null };
+    let cmpTrackA = null;
+    let cmpTrackB = null;
+    let cmpPlayUrl = null;
+    let abChainCancel = false;
+
+    function decodeWavPCM16Fast(arrayBuffer) {
+      const dv = new DataView(arrayBuffer);
+      if (arrayBuffer.byteLength < 44) return null;
+      // 查找 "data" chunk（兼容标准 44 字节或带附加 chunk 的 WAV）
+      let off = 12;
+      let sr = SR;
+      let ch = 1;
+      let bps = 16;
+      while (off + 8 <= arrayBuffer.byteLength) {
+        const id = String.fromCharCode(dv.getUint8(off), dv.getUint8(off + 1), dv.getUint8(off + 2), dv.getUint8(off + 3));
+        const sz = dv.getUint32(off + 4, true);
+        if (id === "fmt ") {
+          ch = dv.getUint16(off + 10, true);
+          sr = dv.getUint32(off + 12, true);
+          bps = dv.getUint16(off + 22, true);
+        } else if (id === "data") {
+          const start = off + 8;
+          const end = Math.min(arrayBuffer.byteLength, start + sz);
+          if (bps === 16) {
+            const frames = Math.floor((end - start) / (2 * ch));
+            const pcm = new Float32Array(frames);
+            for (let i = 0; i < frames; i++) {
+              pcm[i] = dv.getInt16(start + i * 2 * ch, true) / 32768.0;
+            }
+            return { pcm, sr };
+          }
+          break;
+        }
+        off += 8 + sz + (sz % 2);
+      }
+      return null;
+    }
+
+    function analyzeTrackPCM(pcm, sr, label, wavBuffer = null) {
+      const n = pcm.length;
+      const dur = n / Math.max(1, sr);
+      let pk = 0, sumSq = 0, maxDw = 0;
+      for (let i = 0; i < n; i++) {
+        const v = pcm[i];
+        const av = Math.abs(v);
+        if (av > pk) pk = av;
+        sumSq += v * v;
+        if (i > 0) {
+          const d = Math.abs(v - pcm[i - 1]);
+          if (d > maxDw) maxDw = d;
+        }
+      }
+      const rms = Math.sqrt(sumSq / Math.max(1, n) + 1e-12);
+      const rmsDb = 20 * Math.log10(rms);
+
+      // 计算 20ms 步长 dB 能量包络（用于叠合对比与弱音占比统计）
+      const hop = Math.max(1, Math.round(sr * 0.020));
+      const nEnv = Math.max(1, Math.floor(n / hop));
+      const envDb = new Float32Array(nEnv);
+      let silFrames = 0;
+      for (let f = 0; f < nEnv; f++) {
+        let s2 = 0;
+        const i0 = f * hop;
+        const i1 = Math.min(n, i0 + hop);
+        for (let i = i0; i < i1; i++) s2 += pcm[i] * pcm[i];
+        const db = 20 * Math.log10(Math.sqrt(s2 / Math.max(1, i1 - i0) + 1e-10));
+        envDb[f] = Math.max(-65, Math.min(0, db));
+        if (db < -40) silFrames++;
+      }
+      const silPct = (100 * silFrames) / nEnv;
+      return { label, pcm, sr, dur, pk, rmsDb, maxDw, silPct, envDb, wavBuffer };
+    }
+
+    function resampleArrayLinear(arr, targetLen) {
+      const out = new Float32Array(targetLen);
+      if (arr.length === 0) return out;
+      if (arr.length === 1) { out.fill(arr[0]); return out; }
+      const scale = (arr.length - 1) / Math.max(1, targetLen - 1);
+      for (let i = 0; i < targetLen; i++) {
+        const pos = i * scale;
+        const lo = Math.floor(pos);
+        const hi = Math.min(arr.length - 1, lo + 1);
+        const frac = pos - lo;
+        out[i] = arr[lo] * (1 - frac) + arr[hi] * frac;
+      }
+      return out;
+    }
+
+    function computeEnvelopeCosine(envA, envB) {
+      const L = 128;
+      const a = resampleArrayLinear(envA, L);
+      const b = resampleArrayLinear(envB, L);
+      // 平移至 [0..65] 能量尺度算余弦相似度
+      let dot = 0, na = 0, nb = 0;
+      for (let i = 0; i < L; i++) {
+        const va = Math.max(0, a[i] + 65);
+        const vb = Math.max(0, b[i] + 65);
+        dot += va * vb;
+        na += va * va;
+        nb += vb * vb;
+      }
+      return dot / (Math.sqrt(na * nb) + 1e-9);
+    }
+
+    function drawCompareCanvas() {
+      const ctx = compareCanvas.getContext("2d");
+      const W = compareCanvas.width, H = compareCanvas.height;
+      const cBg = getThemeCssVar("--canvas-bg", "#f4efe3");
+      const cGrid = getThemeCssVar("--canvas-grid", "rgba(114, 104, 92, 0.14)");
+      const cMid = getThemeCssVar("--canvas-mid", "rgba(195, 68, 53, 0.24)");
+      const cWaveA = getThemeCssVar("--canvas-wave-a", "#c34435");
+      const cWaveB = getThemeCssVar("--canvas-wave-b", "#1a6840");
+      const cText = getThemeCssVar("--canvas-text", "#6e6459");
+      const cWarn = getThemeCssVar("--vermilion", "#c34435");
+
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = cBg;
+      ctx.fillRect(0, 0, W, H);
+
+      const mode = cmpModeSel.value;
+      const axis = cmpAxisSel.value;
+      const a = cmpTrackA, b = cmpTrackB;
+
+      // 背景网格
+      ctx.strokeStyle = cGrid;
+      ctx.lineWidth = 1;
+      for (let i = 1; i < 10; i++) {
+        const x = (W * i) / 10;
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+      }
+
+      if (!a && !b) {
+        ctx.fillStyle = cText;
+        ctx.font = "14px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("请在上方选择或上传轨 A / 轨 B 音频以展示波形对比图", W / 2, H / 2);
+        cmpMetricsBody.innerHTML = '<tr><td colspan="6" style="color:var(--muted);text-align:center;">等待选择轨 A / 轨 B 音频...</td></tr>';
+        cmpSimBadge.textContent = "等待选择 A/B 音频";
+        return;
+      }
+
+      const maxDur = Math.max(a?.dur || 0, b?.dur || 0, 0.01);
+
+      if (mode === "split") {
+        // 中间分隔线
+        ctx.strokeStyle = cMid;
+        ctx.beginPath(); ctx.moveTo(0, H / 2); ctx.lineTo(W, H / 2); ctx.stroke();
+
+        const drawWaveLane = (tr, yCenter, halfH, color, tag) => {
+          if (!tr) return;
+          const xSpan = axis === "abs" ? Math.max(4, Math.round((tr.dur / maxDur) * W)) : W;
+          ctx.strokeStyle = cGrid;
+          ctx.beginPath(); ctx.moveTo(0, yCenter); ctx.lineTo(W, yCenter); ctx.stroke();
+
+          ctx.fillStyle = color;
+          const pcm = tr.pcm;
+          const n = pcm.length;
+          for (let x = 0; x < xSpan; x++) {
+            const i0 = Math.floor((x / xSpan) * n);
+            const i1 = Math.min(n, Math.max(i0 + 1, Math.floor(((x + 1) / xSpan) * n)));
+            let lo = 1, hi = -1;
+            for (let i = i0; i < i1; i++) {
+              const v = pcm[i];
+              if (v < lo) lo = v;
+              if (v > hi) hi = v;
+            }
+            const yTop = yCenter - hi * halfH;
+            const yBot = yCenter - lo * halfH;
+            ctx.fillRect(x, yTop, 1, Math.max(1, yBot - yTop));
+          }
+          ctx.fillStyle = color;
+          ctx.font = "12px monospace";
+          ctx.textAlign = "left";
+          ctx.fillText(`${tag}: ${tr.label} (${tr.dur.toFixed(2)}s)`, 10, yCenter - halfH + 14);
+        };
+        drawWaveLane(a, H * 0.25, H * 0.21, cWaveA, "A");
+        drawWaveLane(b, H * 0.75, H * 0.21, cWaveB, "B");
+      } else {
+        // 叠合 dB 能量包络模式 (-65dB .. 0dB)
+        const padT = 22, padB = 22, plotH = H - padT - padB;
+        for (const dbTick of [-10, -20, -30, -40, -50]) {
+          const y = padT + ((-dbTick) / 65) * plotH;
+          ctx.strokeStyle = dbTick === -40 ? cMid : cGrid;
+          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+          ctx.fillStyle = cText;
+          ctx.font = "11px monospace";
+          ctx.textAlign = "left";
+          ctx.fillText(`${dbTick}dB`, 6, y - 3);
+        }
+        const drawEnv = (tr, color) => {
+          if (!tr) return;
+          const xSpan = axis === "abs" ? Math.max(4, Math.round((tr.dur / maxDur) * W)) : W;
+          const env = tr.envDb;
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          for (let i = 0; i < env.length; i++) {
+            const x = (i / Math.max(1, env.length - 1)) * xSpan;
+            const y = padT + ((-env[i]) / 65) * plotH;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        };
+        drawEnv(a, cWaveA);
+        drawEnv(b, cWaveB);
+        ctx.font = "12px monospace";
+        ctx.textAlign = "right";
+        if (a) { ctx.fillStyle = cWaveA; ctx.fillText(`━ A: ${a.label}`, W - 10, 16); }
+        if (b) { ctx.fillStyle = cWaveB; ctx.fillText(`━ B: ${b.label}`, W - 10, 32); }
+      }
+
+      // 底部时间标尺
+      ctx.fillStyle = cText;
+      ctx.font = "11px monospace";
+      ctx.textAlign = "center";
+      for (let i = 1; i <= 9; i++) {
+        const lbl = axis === "abs" ? `${((maxDur * i) / 10).toFixed(2)}s` : `${i * 10}%`;
+        ctx.fillText(lbl, (W * i) / 10, H - 5);
+      }
+
+      // 数值对比表
+      const rowsHtml = [];
+      for (const [tag, tr, col] of [["A (朱)", a, cWaveA], ["B (青)", b, cWaveB]]) {
+        if (!tr) continue;
+        const smoothLabel = tr.maxDw > 0.35 ? "略有毛刺" : "平稳无破音";
+        rowsHtml.push(
+          `<tr>
+            <td style="color:${col};font-weight:700;">${tag} · ${escapeHtml(tr.label.slice(0, 22))}</td>
+            <td>${tr.dur.toFixed(2)} 秒</td>
+            <td>${Math.round(tr.pk * 100)}%</td>
+            <td>${tr.rmsDb.toFixed(1)} dB</td>
+            <td style="color:${tr.maxDw > 0.35 ? cWarn : cWaveB};">${smoothLabel}</td>
+            <td>${tr.silPct.toFixed(1)}%</td>
+          </tr>`
+        );
+      }
+      cmpMetricsBody.innerHTML = rowsHtml.join("");
+      if (a && b) {
+        const cos = computeEnvelopeCosine(a.envDb, b.envDb);
+        const dDur = b.dur - a.dur;
+        cmpSimBadge.textContent = `波形相似度 ${(cos * 100).toFixed(1)}% · 时长差 ${dDur >= 0 ? "+" : ""}${dDur.toFixed(2)} 秒`;
+        console.log("[Hanfire] 波形对比指标:", {
+          envelopeCosine: +cos.toFixed(4),
+          trackA: { label: a.label, dur: +a.dur.toFixed(3), peak: +a.pk.toFixed(4), rmsDb: +a.rmsDb.toFixed(2), maxDw: +a.maxDw.toFixed(4), silPct: +a.silPct.toFixed(1) },
+          trackB: { label: b.label, dur: +b.dur.toFixed(3), peak: +b.pk.toFixed(4), rmsDb: +b.rmsDb.toFixed(2), maxDw: +b.maxDw.toFixed(4), silPct: +b.silPct.toFixed(1) },
+        });
+      } else {
+        cmpSimBadge.textContent = "再选一条音频即可完成双轨对比";
+      }
+    }
+
+    function resolveCompareTrack(slot) {
+      const selVal = slot === "A" ? cmpSelA.value : cmpSelB.value;
+      if (selVal === "__upload__" && uploadedTracks[slot]) {
+        return uploadedTracks[slot];
+      }
+      const item = historyItems.find((h) => h.id === selVal);
+      if (!item || !item.wavBuffer) return null;
+      const dec = decodeWavPCM16Fast(item.wavBuffer);
+      if (!dec) return null;
+      return analyzeTrackPCM(dec.pcm, dec.sr, item.shortLabel, item.wavBuffer);
+    }
+
+    function refreshCompareTracks() {
+      cmpTrackA = resolveCompareTrack("A");
+      cmpTrackB = resolveCompareTrack("B");
+      drawCompareCanvas();
+    }
+
+    function syncCompareDropdowns() {
+      const prevA = cmpSelA.value;
+      const prevB = cmpSelB.value;
+      const buildOpts = (slot) => {
+        const opts = [`<option value="">从合成历史选择轨 ${slot}...</option>`];
+        if (uploadedTracks[slot]) {
+          opts.push(`<option value="__upload__">📁 本地上传：${escapeHtml(uploadedTracks[slot].label)}</option>`);
+        }
+        for (const h of historyItems) {
+          opts.push(`<option value="${h.id}">${escapeHtml(h.shortLabel)} (${h.durationSec.toFixed(2)}s)</option>`);
+        }
+        return opts.join("");
+      };
+      cmpSelA.innerHTML = buildOpts("A");
+      cmpSelB.innerHTML = buildOpts("B");
+      if (prevA && [...cmpSelA.options].some((o) => o.value === prevA)) cmpSelA.value = prevA;
+      else if (historyItems.length >= 2) cmpSelA.value = historyItems[1].id;
+      else if (historyItems.length === 1) cmpSelA.value = historyItems[0].id;
+      if (prevB && [...cmpSelB.options].some((o) => o.value === prevB)) cmpSelB.value = prevB;
+      else if (historyItems.length >= 1) cmpSelB.value = historyItems[0].id;
+      refreshCompareTracks();
+    }
+
+    function renderHistoryList() {
+      histNavTab.textContent = `🕒 历史与波形对比 (${historyItems.length})`;
+      if (historyItems.length === 0) {
+        histListEl.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;">暂无合成记录。在「诗词拟音」或「全韵系音库」生成音频后会自动保存在此。</div>';
+        syncCompareDropdowns();
+        return;
+      }
+      histListEl.innerHTML = "";
+      for (const h of historyItems) {
+        const div = document.createElement("div");
+        div.className = "hist-item";
+        const tStr = new Date(h.createdAt).toLocaleTimeString("zh-CN", { hour12: false });
+        const adjTag = h.adjustmentsCount > 0 ? ` · 🎛调音${h.adjustmentsCount}字` : "";
+        const voiceName = VOICE_LABELS[h.voiceKey] || h.voiceKey;
+        div.innerHTML = `
+          <div class="hist-meta">
+            <div class="hist-title">「${escapeHtml(h.text.slice(0, 36))}${h.text.length > 36 ? "…" : ""}」</div>
+            <div class="hist-sub">${tStr} · ${escapeHtml(ERA_NAMES[h.era] || h.era)} · ${escapeHtml(voiceName)} · ${h.durationSec.toFixed(2)} 秒 · ${h.speed.toFixed(2)}x${adjTag}</div>
+          </div>
+          <div class="hist-btns">
+            <button type="button" class="btn-secondary btn-sm h-play">▶ 播放</button>
+            <button type="button" class="btn-secondary btn-sm h-dl">⬇ 下载</button>
+            <button type="button" class="btn-secondary btn-sm h-set-a" style="border-color:rgba(214,168,90,0.5);color:#f0ca86;">设为 A</button>
+            <button type="button" class="btn-secondary btn-sm h-set-b" style="border-color:rgba(78,168,133,0.5);color:#7fe0b8;">设为 B</button>
+            <button type="button" class="btn-secondary btn-sm h-del">✕</button>
+          </div>
+        `;
+        div.querySelector(".h-play").addEventListener("click", () => playBufferInCmp(h.wavBuffer));
+        div.querySelector(".h-dl").addEventListener("click", () => {
+          const u = URL.createObjectURL(new Blob([h.wavBuffer], { type: "audio/wav" }));
+          const a = document.createElement("a");
+          a.href = u;
+          a.download = `hanfire_${h.era}_${h.id.slice(-6)}.wav`;
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(u), 1500);
+        });
+        div.querySelector(".h-set-a").addEventListener("click", () => {
+          cmpSelA.value = h.id;
+          refreshCompareTracks();
+        });
+        div.querySelector(".h-set-b").addEventListener("click", () => {
+          cmpSelB.value = h.id;
+          refreshCompareTracks();
+        });
+        div.querySelector(".h-del").addEventListener("click", async () => {
+          await deleteHistoryItem(h.id);
+          historyItems = historyItems.filter((x) => x.id !== h.id);
+          renderHistoryList();
+        });
+        histListEl.appendChild(div);
+      }
+      syncCompareDropdowns();
+    }
+
+    function playBufferInCmp(wavBuf) {
+      if (!wavBuf) return Promise.resolve();
+      if (cmpPlayUrl) URL.revokeObjectURL(cmpPlayUrl);
+      cmpPlayUrl = URL.createObjectURL(new Blob([wavBuf], { type: "audio/wav" }));
+      cmpAudio.src = cmpPlayUrl;
+      cmpAudio.style.display = "block";
+      return new Promise((resolve) => {
+        cmpAudio.onended = () => resolve();
+        cmpAudio.play().catch(() => resolve());
+      });
+    }
+
+    async function handleUploadCompareFile(slot, file) {
+      if (!file) return;
+      try {
+        const ab = await file.arrayBuffer();
+        const tmpCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const decoded = await tmpCtx.decodeAudioData(ab.slice(0));
+        await tmpCtx.close();
+        const pcm = decoded.getChannelData(0);
+        uploadedTracks[slot] = analyzeTrackPCM(pcm, decoded.sampleRate, file.name, ab);
+        syncCompareDropdowns();
+        if (slot === "A") cmpSelA.value = "__upload__";
+        else cmpSelB.value = "__upload__";
+        refreshCompareTracks();
+      } catch (err) {
+        alert(`无法解析音频文件：${err.message || err}`);
+      }
+    }
+
+    async function recordSynthesisHistory(wavBuffer, durationSec, meta, adjs) {
+      const copyBuf = wavBuffer.slice(0);
+      const id = `h_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      const shortText = (meta.rhymeName ? `[${meta.rhymeName}] ` : "") + (meta.text || "").slice(0, 14);
+      const item = {
+        id,
+        createdAt: Date.now(),
+        era: meta.era || selectedEra,
+        text: meta.text || "",
+        shortLabel: `${ERA_NAMES[meta.era] || meta.era} · ${shortText}`,
+        voiceKey: meta.voiceKey || voiceSelect.value,
+        speed: meta.speed ?? 1.0,
+        durationSec,
+        adjustmentsCount: Array.isArray(adjs) ? adjs.length : 0,
+        wavBuffer: copyBuf,
+      };
+      historyItems.unshift(item);
+      if (historyItems.length > 20) historyItems = historyItems.slice(0, 20);
+      renderHistoryList();
+      await saveHistoryItem(item);
+    }
+
+    async function loadHistoryFromDB() {
+      historyItems = await listHistoryItems();
+      renderHistoryList();
+    }
+
+    cmpSelA.addEventListener("change", refreshCompareTracks);
+    cmpSelB.addEventListener("change", refreshCompareTracks);
+    cmpModeSel.addEventListener("change", drawCompareCanvas);
+    cmpAxisSel.addEventListener("change", drawCompareCanvas);
+    document.getElementById("cmpFileA").addEventListener("change", (ev) => handleUploadCompareFile("A", ev.target.files?.[0]));
+    document.getElementById("cmpFileB").addEventListener("change", (ev) => handleUploadCompareFile("B", ev.target.files?.[0]));
+    document.getElementById("cmpPlayABtn").addEventListener("click", () => { abChainCancel = true; playBufferInCmp(cmpTrackA?.wavBuffer); });
+    document.getElementById("cmpPlayBBtn").addEventListener("click", () => { abChainCancel = true; playBufferInCmp(cmpTrackB?.wavBuffer); });
+    document.getElementById("cmpPlayABBtn").addEventListener("click", async () => {
+      if (!cmpTrackA?.wavBuffer && !cmpTrackB?.wavBuffer) return;
+      abChainCancel = false;
+      if (cmpTrackA?.wavBuffer) await playBufferInCmp(cmpTrackA.wavBuffer);
+      if (!abChainCancel && cmpTrackB?.wavBuffer) {
+        await new Promise((r) => setTimeout(r, 280));
+        if (!abChainCancel) await playBufferInCmp(cmpTrackB.wavBuffer);
+      }
+    });
+    document.getElementById("clearHistBtn").addEventListener("click", async () => {
+      if (!confirm("确定清空本地保存的全部合成历史记录？")) return;
+      await clearHistoryItems();
+      historyItems = [];
+      renderHistoryList();
+    });
+    document.getElementById("jumpCompareBtn").addEventListener("click", () => switchMainView("history"));
+
+    // 设计理念页一键试听例句
+    document.querySelectorAll(".about-demo").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        selectedEra = btn.dataset.era || "mc";
+        document.querySelectorAll(".era-btn").forEach((b) => b.classList.toggle("active", b.dataset.era === selectedEra));
+        textInput.value = btn.dataset.text || "";
+        userAdjustments = [];
+        renderAdjustmentsBanner();
+        switchMainView("studio");
+        schedulePreviewCompile();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        if ((engineReady || mobileDownloadPending) && !isBusy) {
+          runSynthesize(textInput.value, selectedEra, { sourceType: "synth" });
+        }
+      });
+    });
+
+    // ---------- PWA 安装提示与 Service Worker 离线注册 ----------
+    const pwaInstallBtn = document.getElementById("pwaInstallBtn");
+    let deferredPwaPrompt = null;
+    window.addEventListener("beforeinstallprompt", (ev) => {
+      ev.preventDefault();
+      deferredPwaPrompt = ev;
+      if (pwaInstallBtn) pwaInstallBtn.style.display = "inline-flex";
+    });
+    if (pwaInstallBtn) {
+      pwaInstallBtn.addEventListener("click", async () => {
+        if (!deferredPwaPrompt) return;
+        deferredPwaPrompt.prompt();
+        try {
+          const choice = await deferredPwaPrompt.userChoice;
+          if (choice && choice.outcome === "accepted") {
+            showToast("📲 已安装「汉火古音」到桌面，支持离线秒开");
+          }
+        } catch (_) {}
+        deferredPwaPrompt = null;
+        pwaInstallBtn.style.display = "none";
+      });
+    }
+    window.addEventListener("appinstalled", () => {
+      deferredPwaPrompt = null;
+      if (pwaInstallBtn) pwaInstallBtn.style.display = "none";
+    });
+
+    function registerPwaServiceWorker() {
+      if (!("serviceWorker" in navigator)) return;
+      navigator.serviceWorker.register("./sw.js", { scope: "./" }).then((reg) => {
+        console.log("[Hanfire PWA] Service Worker 已就绪:", reg.scope);
+        reg.addEventListener("updatefound", () => {
+          const nw = reg.installing;
+          if (!nw) return;
+          nw.addEventListener("statechange", () => {
+            if (nw.state === "installed" && navigator.serviceWorker.controller) {
+              showToast("✨ 已缓存新版古音工作台，下次刷新生效", 3200);
+            }
+          });
+        });
+      }).catch((err) => {
+        console.warn("[Hanfire PWA] Service Worker 注册跳过:", err?.message || err);
+      });
+    }
+
+    // 首屏零多余请求：等页面完成首帧绘制后再启动后台词典/本地缓存探测与 PWA 注册，避免标签页持续转圈
+    loadHistoryFromDB();
+    const startBgBoot = () => {
+      worker.postMessage({ cmd: "inspect_env" });
+      registerPwaServiceWorker();
+    };
+    if (document.readyState === "complete") {
+      setTimeout(startBgBoot, 0);
+    } else {
+      window.addEventListener("load", () => setTimeout(startBgBoot, 0), { once: true });
+    }
+  </script>
+</body>
+</html>

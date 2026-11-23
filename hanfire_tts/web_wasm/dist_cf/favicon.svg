@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- 汉火拾源 · 方案己二「刻简甲骨」：中简宽72，阴刻舞动火舌式甲骨文「火」（负形透底） -->
+  <defs>
+    <linearGradient id="f2a-bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C43A28"/><stop offset="1" stop-color="#9C241A"/></linearGradient>
+    <linearGradient id="f2a-slip" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FBF4E4"/><stop offset="1" stop-color="#EEE0BF"/></linearGradient>
+    <linearGradient id="f2a-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F2CF8A"/><stop offset="1" stop-color="#DBA44E"/></linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#f2a-bg)"/>
+  <rect x="26" y="26" width="460" height="460" rx="94" fill="none" stroke="#F7EFDC" stroke-opacity="0.22" stroke-width="3"/>
+  <g fill="url(#f2a-slip)">
+    <rect x="106" y="132" width="44" height="264" rx="10"/>
+    <rect x="164" y="132" width="44" height="264" rx="10"/>
+    <rect x="304" y="132" width="44" height="264" rx="10"/>
+    <rect x="362" y="132" width="44" height="264" rx="10"/>
+  </g>
+  <!-- 中简 · 焰形顶，身刻甲骨文「火」 -->
+  <path fill="url(#f2a-slip)" fill-rule="evenodd" d="M256 84 C 238 116, 220 150, 220 196 L220 398 Q220 412 234 412 L278 412 Q292 412 292 398 L292 196 C 292 150, 274 116, 256 84 Z M 227 332 C 226 318, 229 306, 236 298 C 239 300, 240 302, 240 304 C 240 310, 239 314, 238 318 C 244 302, 250 278, 256 258 C 258 252, 262 250, 263 254 C 264 258, 261 262, 259 266 C 266 282, 270 300, 273 318 C 276 308, 279 298, 283 292 C 286 294, 286 297, 285 300 C 284 310, 284 322, 285 332 C 266 336, 246 336, 227 332 Z"/>
+  <!-- 编绳 -->
+  <g fill="url(#f2a-gold)">
+    <rect x="94" y="176" width="324" height="12" rx="6"/>
+    <rect x="94" y="344" width="324" height="12" rx="6"/>
+  </g>
+</svg>

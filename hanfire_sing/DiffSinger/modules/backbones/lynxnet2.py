@@ -1,0 +1,136 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+from modules.commons.common_layers import (
+    SinusoidalPosEmb, SwiGLU, ATanGLU, SoftSignGLU, Transpose, AdamWLinear,
+    NHWCConv1d, default_conv_weight_init
+)
+from modules.commons.common_layers import MixedPrecisionLayerNorm as LayerNorm
+from utils.hparams import hparams
+
+
+class LYNXNet2Block(nn.Module):
+    def __init__(self, dim, expansion_factor, kernel_size=31, dropout=0., glu_type='swiglu'):
+        super().__init__()
+        inner_dim = int(dim * expansion_factor)
+        if glu_type == 'swiglu':
+            _glu = SwiGLU()
+        elif glu_type == 'atanglu':
+            _glu = ATanGLU()
+        elif glu_type == 'softsign_glu':
+            _glu = SoftSignGLU()
+        else:
+            raise ValueError(f'{glu_type} is not a valid activation')
+        if float(dropout) > 0.:
+            _dropout = nn.Dropout(dropout)
+        else:
+            _dropout = nn.Identity()
+        _dwconv = NHWCConv1d(dim, dim, kernel_size=kernel_size, padding=kernel_size // 2,
+                             groups=dim, init_method=default_conv_weight_init)
+        self.net = nn.Sequential(
+            LayerNorm(dim),
+            Transpose((1, 2)),
+            _dwconv,
+            Transpose((1, 2)),
+            nn.Linear(dim, inner_dim * 2),
+            _glu,
+            nn.Linear(inner_dim, inner_dim * 2),
+            _glu,
+            nn.Linear(inner_dim, dim),
+            _dropout
+        )
+
+    def forward(self, x):
+        return x + self.net(x)
+
+
+class LYNXNet2(nn.Module):
+    def __init__(self, in_dims, n_feats, *, num_layers=6, num_channels=512, expansion_factor=1, kernel_size=31,
+                 dropout_rate=0.0, use_conditioner_cache=False, glu_type='swiglu'):
+        """
+        LYNXNet2(Linear Gated Depthwise Separable Convolution Network Version 2)
+        """
+        super().__init__()
+        self.in_dims = in_dims
+        self.n_feats = n_feats
+        self.input_projection = nn.Linear(in_dims * n_feats, num_channels)
+        self.use_conditioner_cache = use_conditioner_cache
+        if self.use_conditioner_cache:
+            # Conv1d is used for condition cache compatibility
+            self.conditioner_projection = nn.Conv1d(hparams['hidden_size'], num_channels, 1)
+        else:
+            self.conditioner_projection = nn.Linear(hparams['hidden_size'], num_channels)
+        self.diffusion_embedding = nn.Sequential(
+            SinusoidalPosEmb(num_channels),
+            nn.Linear(num_channels, num_channels * 4),
+            nn.GELU(),
+            nn.Linear(num_channels * 4, num_channels),
+        )
+        self.residual_layers = nn.ModuleList(
+            [
+                LYNXNet2Block(
+                    dim=num_channels,
+                    expansion_factor=expansion_factor,
+                    kernel_size=kernel_size,
+                    dropout=dropout_rate,
+                    glu_type=glu_type
+                )
+                for _ in range(num_layers)
+            ]
+        )
+        self.norm = nn.LayerNorm(num_channels)
+        self.output_projection = AdamWLinear(num_channels, in_dims * n_feats)
+        nn.init.kaiming_normal_(self.input_projection.weight)
+        nn.init.kaiming_normal_(self.conditioner_projection.weight)
+        nn.init.zeros_(self.output_projection.weight)
+
+    def forward(self, spec, diffusion_step, cond, diffusion_step_2=None, mask=None):
+        """
+        :param spec: [B, F, M, T]
+        :param diffusion_step: [B] or [B, 1] when mask is None; [B, 1] otherwise.
+        :param cond: [B, H, T]
+        :param diffusion_step_2: [B, 1], required when mask is provided; ignored otherwise.
+        :param mask: Optional [B, T] weights blending the two timestep embeddings.
+        :return: [B, F, M, T]
+        """
+
+        if self.n_feats == 1:
+            x = spec[:, 0]  # [B, M, T]
+        else:
+            x = spec.flatten(start_dim=1, end_dim=2)  # [B, F*M, T]
+
+        x = self.input_projection(x.transpose(1, 2)) # [B, T, C]
+        if self.use_conditioner_cache:
+            x = x + self.conditioner_projection(cond).transpose(1, 2)
+        else:
+            x = x + self.conditioner_projection(cond.transpose(1, 2))
+        
+        if mask is not None:
+            step = torch.cat((diffusion_step, diffusion_step_2), dim=0)
+            step = self.diffusion_embedding(step)
+            step, step_2 = torch.split(step, x.shape[0], dim=0) #[B, 1, C]
+            mask = mask.to(x).unsqueeze(-1) # [B, T, 1]
+            x = x + step + (step_2 - step) * mask
+        else:
+            step = self.diffusion_embedding(diffusion_step)
+            if step.dim() == 2:
+                step = step.unsqueeze(1)
+            x = x + step
+
+        for layer in self.residual_layers:
+            x = layer(x)
+
+        # post-norm
+        x = self.norm(x)
+
+        # output projection
+        x = self.output_projection(x).transpose(1, 2)  # [B, F*M, T]
+
+        if self.n_feats == 1:
+            x = x[:, None, :, :]
+        else:
+            # Using reshape instead of unflatten for ONNX export compatibility
+            # x = x.unflatten(dim=1, sizes=(self.n_feats, self.in_dims))
+            x = x.reshape(-1, self.n_feats, self.in_dims, x.shape[2])
+        return x

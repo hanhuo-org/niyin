@@ -1,0 +1,63 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+
+# Node / Cloudflare local state & secrets
+node_modules/
+.wrangler/
+hanfire_tts/web_wasm/wrangler.toml
+hanfire_tts/web_wasm/feedback.db
+hanfire_tts/web_wasm/.local_admin_token
+hanfire_tts/web_wasm/*.pem
+hanfire_tts/web_wasm/*.key
+
+# Large downloaded/generated weights, datasets, release staging & local workdirs
+release_artifacts/
+work/
+assets/
+data/
+
+# hanfire_tts runtime weights, bundles, logs & preview audio (installed via scripts/download_weights.py / download_dataset.py)
+hanfire_tts/v5_bundle/
+hanfire_tts/v5_outputs/
+hanfire_tts/v9_outputs/
+hanfire_tts/v10_bundle/
+hanfire_tts/v10_outputs/
+hanfire_tts/checkpoints_v4_local/
+hanfire_tts/data_mc_raw/
+hanfire_tts/data_em_raw/
+hanfire_tts/local_vocals/
+hanfire_tts/gdrive_bundle/
+hanfire_tts/local_preview_*/
+hanfire_tts/remote_outputs/
+hanfire_tts/tools/qieyun/mc_qieyun_unified.tsv
+hanfire_tts/tools/qieyun/node_modules/
+hanfire_tts/web_wasm/models/
+hanfire_tts/web_wasm/models_chunks/
+hanfire_tts/web_wasm/vendor/
+hanfire_tts/web_wasm/assets/
+hanfire_tts/web_wasm/dist_cf/models_chunks/
+hanfire_tts/web_wasm/dist_cf/vendor/
+hanfire_tts/web_wasm/dist_cf/assets/
+hanfire_tts/web_wasm/dist_cf/_sing_showcase/
+hanfire_tts/web_wasm/dist_cf/_tang_review/
+hanfire_tts/*.log
+hanfire_tts/*.tar.gz
+
+# hanfire_sing checkpoints & datasets (installed via scripts/download_weights.py / download_dataset.py)
+hanfire_sing/checkpoints/
+hanfire_sing/data_tang_processed/
+hanfire_sing/data_local_finetune/
+hanfire_sing/DiffSinger/checkpoints/hanfire_sing_base
+hanfire_sing/DiffSinger/checkpoints/hanfire_sing_male
+hanfire_sing/DiffSinger/checkpoints/pc_nsf_hifigan_44.1k_hop512_128bin_2025.02/
+hanfire_sing/DiffSinger/checkpoints/hanfire_tang_local/
+hanfire_sing/DiffSinger/data/
+
+# OS / Editor
+.DS_Store
+.vscode/
+.idea/

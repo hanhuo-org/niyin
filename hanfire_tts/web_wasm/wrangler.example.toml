@@ -1,0 +1,26 @@
+name = "hanfire-ancient-tts"
+main = "cf_worker.mjs"
+compatibility_date = "2025-11-01"
+workers_dev = true
+
+# Optional: bind custom domain
+# routes = [
+#   { pattern = "yin.example.org/*", zone_name = "example.org" }
+# ]
+
+# Static assets directory (populated via `python scripts/download_weights.py`)
+[assets]
+directory = "./dist_cf"
+binding = "ASSETS"
+run_worker_first = true
+
+# Optional: Cloudflare D1 database for community feedback & IPA corrections
+[[d1_databases]]
+binding = "FEEDBACK_DB"
+database_name = "your-hanfire-feedback-db"
+database_id = "00000000-0000-0000-0000-000000000000"
+
+# Optional: offload /models_chunks/* to Cloudflare R2
+# [[r2_buckets]]
+# binding = "MODEL_BUCKET"
+# bucket_name = "your-hanfire-tts-models"

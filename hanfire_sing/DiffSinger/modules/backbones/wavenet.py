@@ -1,0 +1,118 @@
+import math
+from math import sqrt
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+from modules.commons.common_layers import SinusoidalPosEmb, AdamWConv1d
+from modules.commons.common_layers import KaimingNormalConv1d as Conv1d
+from utils.hparams import hparams
+
+
+class ResidualBlock(nn.Module):
+    def __init__(self, encoder_hidden, residual_channels, dilation):
+        super().__init__()
+        self.residual_channels = residual_channels
+        self.dilated_conv = nn.Conv1d(
+            residual_channels,
+            2 * residual_channels,
+            kernel_size=3,
+            padding=dilation,
+            dilation=dilation
+        )
+        self.diffusion_projection = nn.Linear(residual_channels, residual_channels)
+        self.conditioner_projection = nn.Conv1d(encoder_hidden, 2 * residual_channels, 1)
+        self.output_projection = nn.Conv1d(residual_channels, 2 * residual_channels, 1)
+
+    def forward(self, x, conditioner, diffusion_step):
+        diffusion_step = self.diffusion_projection(diffusion_step).transpose(1, 2)
+        conditioner = self.conditioner_projection(conditioner)
+        y = x + diffusion_step
+
+        y = self.dilated_conv(y) + conditioner
+
+        # Using torch.split instead of torch.chunk to avoid using onnx::Slice
+        gate, filter = torch.split(y, [self.residual_channels, self.residual_channels], dim=1)
+        y = torch.sigmoid(gate) * torch.tanh(filter)
+
+        y = self.output_projection(y)
+
+        # Using torch.split instead of torch.chunk to avoid using onnx::Slice
+        residual, skip = torch.split(y, [self.residual_channels, self.residual_channels], dim=1)
+        return (x + residual) / math.sqrt(2.0), skip
+
+
+class WaveNet(nn.Module):
+    def __init__(self, in_dims, n_feats, *, num_layers=20, num_channels=256, dilation_cycle_length=4):
+        super().__init__()
+        self.in_dims = in_dims
+        self.n_feats = n_feats
+        self.input_projection = Conv1d(in_dims * n_feats, num_channels, 1)
+        self.diffusion_embedding = SinusoidalPosEmb(num_channels)
+        self.mlp = nn.Sequential(
+            nn.Linear(num_channels, num_channels * 4),
+            nn.Mish(),
+            nn.Linear(num_channels * 4, num_channels)
+        )
+        self.residual_layers = nn.ModuleList([
+            ResidualBlock(
+                encoder_hidden=hparams['hidden_size'],
+                residual_channels=num_channels,
+                dilation=2 ** (i % dilation_cycle_length)
+            )
+            for i in range(num_layers)
+        ])
+        self.skip_projection = Conv1d(num_channels, num_channels, 1)
+        self.output_projection = AdamWConv1d(num_channels, in_dims * n_feats, 1)
+        nn.init.zeros_(self.output_projection.weight)
+
+    def forward(self, spec, diffusion_step, cond, diffusion_step_2=None, mask=None):
+        """
+        :param spec: [B, F, M, T]
+        :param diffusion_step: [B] or [B, 1] when mask is None; [B, 1] otherwise.
+        :param cond: [B, H, T]
+        :param diffusion_step_2: [B, 1], required when mask is provided; ignored otherwise.
+        :param mask: Optional [B, T] weights blending the two timestep embeddings.
+        :return: [B, F, M, T]
+        """
+        if self.n_feats == 1:
+            # Use indexing instead of squeeze to avoid emitting an onnx::If
+            # whose branches have different rank, which breaks shape inference
+            # for the downstream Conv on PyTorch >= 2.0.
+            x = spec[:, 0]  # [B, M, T]
+        else:
+            x = spec.flatten(start_dim=1, end_dim=2)  # [B, F*M, T]
+        x = self.input_projection(x)  # [B, C, T]
+
+        x = F.relu(x)
+           
+        if mask is not None:
+            step = torch.cat((diffusion_step, diffusion_step_2), dim=0)
+            step = self.diffusion_embedding(step)
+            step = self.mlp(step)
+            step, step_2 = torch.split(step, x.shape[0], dim=0) #[B, 1, C]
+            mask = mask.to(x).unsqueeze(-1) # [B, T, 1]
+            step = step + (step_2 - step) * mask
+        else:
+            step = self.diffusion_embedding(diffusion_step)
+            step = self.mlp(step)
+            if step.dim() == 2:
+                step = step.unsqueeze(1)
+            
+        skip = []
+        for layer in self.residual_layers:
+            x, skip_connection = layer(x, cond, step)
+            skip.append(skip_connection)
+
+        x = torch.sum(torch.stack(skip), dim=0) / sqrt(len(self.residual_layers))
+        x = self.skip_projection(x)
+        x = F.relu(x)
+        x = self.output_projection(x)  # [B, F*M, T]
+        if self.n_feats == 1:
+            x = x[:, None, :, :]
+        else:
+            # Using reshape instead of unflatten for ONNX export compatibility
+            # x = x.unflatten(dim=1, sizes=(self.n_feats, self.in_dims))
+            x = x.reshape(-1, self.n_feats, self.in_dims, x.shape[2])
+        return x

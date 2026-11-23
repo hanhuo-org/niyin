@@ -1,0 +1,17 @@
+torch>=2.2
+torchaudio>=2.2
+numpy>=1.24
+scipy>=1.11
+soundfile>=0.12
+librosa>=0.10
+einops>=0.7
+pyyaml>=6.0
+pypinyin>=0.51
+opencc-python-reimplemented>=0.1.7
+vocos>=0.1.0
+praat-parselmouth>=0.4.3
+onnx>=1.16
+onnxruntime>=1.18
+huggingface_hub>=0.24
+lightning>=2.2
+tqdm>=4.66

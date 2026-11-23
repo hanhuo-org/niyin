@@ -1,0 +1,97 @@
+base_config:
+- configs/acoustic.yaml
+dictionaries:
+  zh: dictionaries/opencpop_clean.txt
+extra_phonemes: []
+datasets:
+- raw_data_dir: /mnt/s790/project/tts/hanfire_sing/data_local_finetune/tang_male
+  speaker: tang_male
+  spk_id: 1
+  language: zh
+  test_prefixes:
+  - t18_c050
+  - t18_c051
+  - t18_c052
+  - t18_c053
+- raw_data_dir: /mnt/s790/project/tts/hanfire_sing/data_local_finetune/tang_female
+  speaker: tang_female
+  spk_id: 2
+  language: zh
+  test_prefixes:
+  - t20_c014
+  - t20_c015
+  - t20_c016
+  - t20_c017
+binary_data_dir: /mnt/s790/project/tts/hanfire_sing/data_local_finetune/binary_tang_local
+vocoder: NsfHifiGAN
+vocoder_ckpt: /mnt/s790/project/tts/hanfire_sing/DiffSinger/checkpoints/pc_nsf_hifigan_44.1k_hop512_128bin_2025.02/model.ckpt
+use_spk_id: true
+num_spk: 4
+use_lang_id: false
+use_key_shift_embed: true
+use_speed_embed: true
+binarization_args:
+  num_workers: 4
+augmentation_args:
+  random_pitch_shifting:
+    enabled: true
+    range:
+    - -4.0
+    - 4.0
+    scale: 0.75
+  fixed_pitch_shifting:
+    enabled: false
+    targets:
+    - -5.0
+    - 5.0
+    scale: 0.5
+  random_time_stretching:
+    enabled: true
+    range:
+    - 0.85
+    - 1.35
+    scale: 0.5
+pe: parselmouth
+diffusion_type: reflow
+backbone_type: lynxnet2
+backbone_args:
+  num_channels: 768
+  num_layers: 6
+  kernel_size: 31
+  dropout_rate: 0.0
+  use_conditioner_cache: true
+  glu_type: atanglu
+use_shallow_diffusion: true
+T_start: 0.4
+T_start_infer: 0.4
+finetune_enabled: true
+finetune_ckpt_path: /mnt/s790/project/tts/hanfire_sing/checkpoints/hanfire_sing_base/model_ckpt_steps_40000.ckpt
+finetune_ignored_params: []
+finetune_strict_shapes: true
+optimizer_args:
+  optimizer_cls: modules.optimizer.muon.Muon_AdamW
+  lr: 8.0e-05
+  beta1: 0.9
+  beta2: 0.98
+  weight_decay: 0
+  muon_args:
+    weight_decay: 0.1
+  adamw_args:
+    weight_decay: 0.0
+lr_scheduler_args:
+  scheduler_cls: torch.optim.lr_scheduler.StepLR
+  step_size: 500
+  gamma: 0.7
+max_batch_frames: 48000
+max_batch_size: 24
+max_updates: 1200
+val_check_interval: 400
+num_valid_plots: 4
+num_ckpt_keep: 3
+pl_trainer_precision: 16-mixed
+num_sanity_val_steps: 1
+ds_workers: 4
+freezing_enabled: true
+frozen_params:
+- model.fs2.encoder
+- model.fs2.txt_embed
