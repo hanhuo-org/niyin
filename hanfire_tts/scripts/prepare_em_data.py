@@ -4,9 +4,10 @@ import json, subprocess
 from pathlib import Path
 import whisper
 
-ASSETS = Path("/mnt/s790/project/tts/assets")
-EM_RAW = Path("/mnt/s790/project/tts/hanfire_tts/data_em_raw")
-MC_RAW = Path("/mnt/s790/project/tts/hanfire_tts/data_mc_raw")
+ROOT = Path(__file__).resolve().parents[2]
+ASSETS = ROOT / "assets"
+EM_RAW = ROOT / "hanfire_tts" / "data_em_raw"
+MC_RAW = ROOT / "hanfire_tts" / "data_mc_raw"
 EM_CLIPS = EM_RAW / "wav24k"
 EM_CLIPS.mkdir(parents=True, exist_ok=True)
 

@@ -4,7 +4,7 @@ dictionaries:
   zh: dictionaries/opencpop_clean.txt
 extra_phonemes: []
 datasets:
-- raw_data_dir: /mnt/s790/project/tts/hanfire_sing/data_local_finetune/tang_male
+- raw_data_dir: ../data_local_finetune/tang_male
   speaker: tang_male
   spk_id: 1
   language: zh
@@ -13,7 +13,7 @@ datasets:
   - t18_c051
   - t18_c052
   - t18_c053
-- raw_data_dir: /mnt/s790/project/tts/hanfire_sing/data_local_finetune/tang_female
+- raw_data_dir: ../data_local_finetune/tang_female
   speaker: tang_female
   spk_id: 2
   language: zh
@@ -22,9 +22,9 @@ datasets:
   - t20_c015
   - t20_c016
   - t20_c017
-binary_data_dir: /mnt/s790/project/tts/hanfire_sing/data_local_finetune/binary_tang_local
+binary_data_dir: ../data_local_finetune/binary_tang_local
 vocoder: NsfHifiGAN
-vocoder_ckpt: /mnt/s790/project/tts/hanfire_sing/DiffSinger/checkpoints/pc_nsf_hifigan_44.1k_hop512_128bin_2025.02/model.ckpt
+vocoder_ckpt: checkpoints/pc_nsf_hifigan_44.1k_hop512_128bin_2025.02/model.ckpt
 use_spk_id: true
 num_spk: 4
 use_lang_id: false
@@ -65,7 +65,7 @@ use_shallow_diffusion: true
 T_start: 0.4
 T_start_infer: 0.4
 finetune_enabled: true
-finetune_ckpt_path: /mnt/s790/project/tts/hanfire_sing/checkpoints/hanfire_sing_base/model_ckpt_steps_40000.ckpt
+finetune_ckpt_path: ../checkpoints/hanfire_sing_base/model_ckpt_steps_40000.ckpt
 finetune_ignored_params: []
 finetune_strict_shapes: true
 optimizer_args:

@@ -44,3 +44,25 @@ HF_HUB_OFFLINE=1 /mnt/s790/project/hanzi_train/.venv/bin/python hanfire_tts/scri
 - **唱吟音素词表与历史音韵纪律**：DiffSinger 男女双底座（`hanfire_sing_base` 女声、`hanfire_sing_male` 男声）**100% 共享 `opencpop_clean.txt` 词表**；`y-/w-` 音节必须严格按 OpenCpop 词典拆分（`yao→y ao, wei→w ei, wo→w o, wang→w ang, you→y ou`，严禁拼出 `y iao / w ui / w uo / w uang / y iu` 等 OOD 组合）；古诗文四声平仄一律按中古《广韵》/近古《中原音韵》判定（绝不用现代普通话判入声），重拍位入声须服从四言神圣节拍律（保留 84%~94% 重拍锚定，严禁切短至 `0.45s` 破坏《采薇》与《蒹葭》拍比）。
 - **纯棚录大语料训声部（严禁极小语料+Whisper错标全量解冻）**：绝不用 `<10min` 极小语料叠加 Whisper 幻觉标注全量解冻 DiffSinger 主干（会彻底摧毁 `sh/c/s/j/zh` 辅音）；绝不用女声硬降 `--gender=-0.5` 冒充男声。男声底座须采用多歌手大时长纯棚录 44.1kHz 干声+毫秒级对齐训练（如 M4Singer 6 男声 `10.35h`）；在 Colab 拉取上万零散小文件时严禁默认慢速 `snapshot_download`（须用 32 线程直连 HTTP 断点续传防白烧 GPU），权重落盘并 `torch.load` 校验后立即停机。
 - **推理确定性与多种子交付**：展示渲染固定 `--seed 42` 保证 A/B 严格可复现；凡底层声学改动须额外跑 `seed=101/202/303` 盲测并由 Agent 通过 `read_file` 逐条实听验收，排除单种子幸存者偏差后方可交付。
+
+---
+
+## 6. 仓库坐标、开发记忆与阶段里程碑（已从原 `/mnt/s790/project/tts` 迁入）
+- **正式开发根目录**：`/mnt/s790/project/hanhuo_dadian/niyin`（已作为独立 git submodule 挂载在 `/mnt/s790/project/hanhuo_dadian` 下，与 `shizi` 并列）。原 `/mnt/s790/project/tts` 仅作归档参考，**后续所有开发、提交、发版均在本目录执行**。
+- **远端仓库与云端产物**：
+  - GitHub 代码主仓：`https://github.com/hanhuo-org/niyin`（主仓子模块 `https://github.com/hanhuo-org/hanhuo-dadian`）
+  - GitHub Release 模型包：`https://github.com/hanhuo-org/niyin/releases/tag/v1.0`（9 个模型/运行时包 + `SHA256SUMS.txt`）
+  - Hugging Face 训练素材：`https://huggingface.co/datasets/hanhuo-org/hanhuo-niyin-dataset`
+  - Hugging Face 预训练模型：`https://huggingface.co/hanhuo-org/hanhuo-niyin-models`
+- **本地运行环境与一键工具**：
+  - Python 虚拟环境：`/mnt/s790/project/hanzi_train/.venv/bin/python`
+  - 权重/语料拉取：`scripts/download_weights.py`（支持 GitHub Release / `--source hf` / `--local-dir`）、`scripts/download_dataset.py`
+  - 本地 Web 工作台与对比试听台：`hanfire_tts/web_wasm/serve_web.py`（HTTP `8080` / HTTPS `8444`）
+- **已验收里程碑（切入本目录前的最新进度）**：
+  1. **三代古音 TTS V10 Studio**：上古 / 中古切韵 / 近古中原音韵 ZipVoice FP32 + 真 QAT INT8 + 浏览器端 WebGPU/WASM 离线工作台全线完成，过 6 大门禁 + 8 种子回归。
+  2. **《诗经》唱吟 V9.6 (`hanfire_sing/shijing_v9_engine.py`)**：三大调式（`shijing_jianjia` / `shijing_guanju` / `shijing_wuyi`）男女双声部（OpenCpop 女声 + M4Singer 6 男声）全线过关并获用户确认。
+  3. **古文/辞赋唱吟 V16 (`hanfire_sing/guwen_v14_engine.py`)**：第一组《兰亭集序》（`guwen_lanting`）、第二组《陋室铭》（`guwen_loushi`）、第三组《前赤壁赋》及《岳阳楼记》泛化（`fu_chibi`，含对仗 `3+3`/`4+4` 并句连气、上声低兜、倒数第二字去声亮峰、末字雄浑归宫，以及 `hanfire_sing_phonemes.py` 中古防 OOD 规则）全部通过 `seed=42/101/202/303` 实听并获用户确认。
+- **下一阶段主线规划**：
+  1. 近体诗（五绝/七绝/五律/七律）唐调引擎升级至 V9.6/V16 标准（整合零词内 SP + 口腔闭塞微谷 + 男女双声部）；
+  2. 古音带伴奏唱歌（YuE 双轨串联 + DiffSinger 古音音素重绘管线）；
+  3. 将唱吟引擎接入统一 Web 前端体验或新文体泛化。

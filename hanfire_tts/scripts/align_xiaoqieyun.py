@@ -10,7 +10,7 @@ import json, re, unicodedata
 from pathlib import Path
 import numpy as np
 
-D = Path("/mnt/s790/project/tts/hanfire_tts/data_mc_raw")
+D = Path(__file__).resolve().parents[1] / "data_mc_raw"
 frames = []
 for fn, kind in (("ocr_frames10s.json", "f"), ("ocr_frames_gap.json", "g")):
     p = D / fn
